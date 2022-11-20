@@ -1,0 +1,23 @@
+CLIENT_SECRET_FILE = 'client_secret.json'
+AdminEmailList = 'xxx.gmail.com'
+UserEmailList = 'xxx.gmail.com'
+BolilerControlerHostName = 'marellypi'
+CalendarLocalPath = 'Cal.json'
+TimerCalendarLocalPath = 'TimeCal.json'
+ManCalendarLocalPath ='manual.json'
+TimerManCalendarLocalPath ='Timemanual.json'
+RefreshTime = 30
+USER = '***'
+PASS = '*****'
+StatusFileName = 'temp.txt.current'
+MaxFailures = 5
+# rest API url
+baseRestURL = 'XXXXXX'
+GetLogURL = baseRestURL + 'log/' 
+GetStatusURL = baseRestURL + 'status/'
+PostUpdateCalURL = baseRestURL + 'updatecalander/'
+PostUpdateManualCalOnURL = baseRestURL + 'manualon/'
+PostUpdateManualCalOffURL = baseRestURL + 'manualoff/'
+PostUpdateManualRelayOffURL = baseRestURL + 'relayoff/'
+PostUpdateManualRelayOnURL = baseRestURL + 'relayon/'
+PostUpdateRelayURL = baseRestURL + 'updaterelaycalander/'
