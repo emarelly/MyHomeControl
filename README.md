@@ -1,7 +1,7 @@
 # MyHomeControl
 my home control project
-this project is aset of python services to control relays i my house and monitor our Boiler is the house.
-the control is made via google mail and calander to avoid direct connect to my network.
+this project is aset of python services to control relays in my house and control our water heater.
+The control is made via google mail and calendar to avoid direct connection to my network
 <p><heading> Diagram 
 </heading>
 <p>
