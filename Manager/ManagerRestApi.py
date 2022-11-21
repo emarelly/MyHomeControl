@@ -10,6 +10,7 @@ from collections import deque
 import BoilerStatus
 import BoilerCalander
 import TimerCalander
+import controlrelay
 from ManagerConfig import Config
 # utils functions
 # file head implmentatioin 
@@ -81,12 +82,23 @@ class BoilerRestHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         query = urlparse(self.path).query
         folder = urlparse(self.path).path.replace('/', '').lower()
-        #if len(query) > 0:
-        #    query_parameters = dict(qc.split("=") for qc in query.split("&"))
+        if len(query) > 0:
+            query_components = dict(qc.split("=") for qc in query.split("&"))
+        else:
+            query_components = None
         if folder == 'status':
             out  = self.status.toJSON()
         elif folder == 'log': 
             out = 'log file is: \r\n' + tail('BoilerManager.log',150)
+        elif folder == 'relay': 
+            if query_components is not None and query.find('relay') >=0 :
+                relay = query_components['relay'] 
+                if(controlrelay.ReadRelay(int(query_components['relay']))) == 0:
+                    out = 'Relay ' + str(query_components['relay'])  + 'is off \r\n' +  tail('relayAudit' + query_components['relay'] + '.log',20)
+                else:
+                    out = 'Relay ' + str(query_components['relay'])  + 'is on \r\n' +  tail('relayAudit' + query_components['relay'] + '.log',20)
+            else:
+                out = 'missing parameter'
         else:
             out  = 'Hello, world! folder '  + folder
         self.send_response(200, 'OK')

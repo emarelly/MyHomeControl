@@ -27,18 +27,26 @@ def myconverter(o):
 
 
 def Get(url):
-    x = requests.get(url)
-    return x.text
+    try:
+        x = requests.get(url)
+        return x.text
+    except:
+        return 'fail to get data'
+    
 def Post(url,filename=None,json=None):
-    if filename is not None:
-        myfiles = {'file': open(filename ,'rb')}
-        x = requests.post(url, files = myfiles)
-    elif json is not None:
-        myobj = json
-    else:
-        myobj = {'somekey': 'somevalue'}
-    x = requests.post(url, json = myobj)
-    return x.text
+    try:
+        if filename is not None:
+            myfiles = {'file': open(filename ,'rb')}
+            x = requests.post(url, files = myfiles)
+        elif json is not None:
+            myobj = json
+        else:
+            myobj = {'somekey': 'somevalue'}
+        x = requests.post(url, json = myobj)
+        return x.text
+
+    except:
+        return 'fail to post data'
 class ProcessControler(object):        
     prevcal = BoilerCalander.BoilerCalander()
     Timerprevcal = TimerCalander.TimerCalander()
@@ -101,9 +109,9 @@ class ProcessControler(object):
                             Subject = 'switch request error'
                         else:   
                             # request for status send email back
-                            resault = remoteSSH.runcommand(Config.BolilerControlerHostName,Config.USER,Config.PASS,22,'python /home/pi/Boiler/manualrelaynoff.py ' + argv[1])
-                            auditresault = remoteSSH.runcommand(Config.BolilerControlerHostName,Config.USER,Config.PASS,22,'cat /home/pi/Boiler/relayAudit' + argv[1]+'.log')
-                            Body = 'Hello, \r\nThe switch status is ' + ''.join(resault) + '\r\n' + ''.join(auditresault) + '\r\n'
+                            #resault = remoteSSH.runcommand(Config.BolilerControlerHostName,Config.USER,Config.PASS,22,'python /home/pi/Boiler/manualrelaynoff.py ' + argv[1])
+                            #auditresault = remoteSSH.runcommand(Config.BolilerControlerHostName,Config.USER,Config.PASS,22,'cat /home/pi/Boiler/relayAudit' + argv[1]+'.log')
+                            Body = 'Hello, \r\n' +  Get(Config.GetRelayStatusURL + argv[1])   #'Hello, \r\nThe switch status is ' + ''.join(resault) + '\r\n' + ''.join(auditresault) + '\r\n'
                             if len(argv) > 2:
                                 print('2fk key going to be generated : ' )
                                 self.generaterandomString(relatedcommand = 'switch ' + argv[1] + ' ' + argv[2]) 
