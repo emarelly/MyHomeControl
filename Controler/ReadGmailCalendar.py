@@ -6,6 +6,7 @@ import datetime
 import BoilerCalander
 import TimerCalander
 import json
+import traceback
 from datetime import timedelta
 from apiclient import discovery
 from oauth2client import client
@@ -82,46 +83,35 @@ class ReadGmailCalendar(object):
                 data = event['summary']
                 strdate = event['start'].get('dateTime', event['start'].get('date'))
                 #print('data is ' + data)
-                firstpart = data.find("Boiler:Target")
-                if  firstpart >= 0:
-                    firstpart = firstpart + len("Boiler:Target")
-                    secpart = data.find("Min") - 1
-                    thirdpart = secpart + 2 +  len("Min") #data.find("Min") +  len("Min") + 1
-                    target = data[firstpart+1: secpart]
-                    min = data[thirdpart : len(data)]
+                ev = parseevent(data)
+                if ev is None:
+                    continue
+                if  ev['type'] == 'Boiler':
                     date = datetime.datetime.strptime(strdate[0:len(strdate)-6],"%Y-%m-%dT%H:%M:%S")
                     if date.weekday() == 6 :
                         day = 1
                     else:
                         day = date.weekday() + 2
                     time = '{:02d}'.format(date.hour) + ":" + '{:02d}'.format(date.minute) + ":" + '{:02d}'.format(date.second) 
-                    #print ('target  ' + str(target) + ' min =' + str(min))
-                    btask = BoilerCalander.BoilerTask(dayOfWeek=day,hour = time,target=target,min=min)
+                    #print ('target  ' + str(ev['target']) + ' min =' + str(ev['min']))
+                    btask = BoilerCalander.BoilerTask(dayOfWeek=day,hour = time,target=ev['target'],min=ev['min'])
                     Boilertasks.append(btask)
                     #start = event['start'].get('dateTime', event['start'].get('date'))
-                else:
-                    firstpart = data.find("Timer:Duration") 
-                    if  firstpart < 0:
-                        continue
-                    firstpart = firstpart + len("Timer:Duration") 
-                    secpart = data.find("RelayNum") - 1
-                    thirdpart = data.find("RelayNum") +  len("RelayNum") + 1
-                    duration = data[firstpart+1: secpart]
-                    relaynum = data[thirdpart : len(data)]
+                elif ev['type'] == 'Timer':
                     date = datetime.datetime.strptime(strdate[0:len(strdate)-6],"%Y-%m-%dT%H:%M:%S")
                     if date.weekday() == 6 :
                         day = 1
                     else:
                         day = date.weekday() + 2
                     # add start event
-                    #print('duration is ' + duration + ' relay = ' + relaynum + ' day = ' + str(day))
+                    #print('duration is ' + ev['duration'] + ' relay = ' + ev['relay'] + ' day = ' + str(day))
                     time = '{:02d}'.format(date.hour) + ":" + '{:02d}'.format(date.minute) + ":" + '{:02d}'.format(date.second) 
                     ttask = TimerCalander.TimerTask(dayOfWeek=day,hour = time,relaynum=relaynum,state=1)
                     Timertasks.append(ttask)
                     # add stop event
-                    date = date + datetime.timedelta(seconds = int(duration))
+                    date = date + datetime.timedelta(seconds = int(ev['duration']))
                     time = '{:02d}'.format(date.hour) + ":" + '{:02d}'.format(date.minute) + ":" + '{:02d}'.format(date.second) 
-                    ttask = TimerCalander.TimerTask(dayOfWeek=day,hour = time,relaynum=relaynum,state=0)
+                    ttask = TimerCalander.TimerTask(dayOfWeek=day,hour = time,relaynum=ev['relay'],state=0)
                     Timertasks.append(ttask)
                     #start = event['start'].get('dateTime', event['start'].get('date'))
                 #print(start, event['summary'])
@@ -132,8 +122,78 @@ class ReadGmailCalendar(object):
             self.status = True
             print('read calendar done')
         except  :
-            print ('fail to ReadCalendar error:' + sys.exc_info()[1].message)
+            print("fail to ReadCalendar error: " + traceback.format_exc())
+            #print ('fail to ReadCalendar error:' + str(sys.exc_info()[2]))
             bCalander = BoilerCalander.BoilerCalander()
             tCalander = TimerCalander.TimerCalander()
             self.status = False
         return [bCalander,tCalander]
+                 
+supported_astro = ['moonrise','moonset','dusk','dawn','sunset','sunrise','dusk','twilight','noon','midnight']
+def parseevent(event):
+    index = 0
+    StartTime = []
+    EndTime = []
+    Offset = 0
+    if event.find('Boiler:'):
+    #Bolier event
+        args = list(filter(None, event.lower().replace('+',' + ').replace('-',' - ').replace('boiler:','').replace(';',' ').replace(',',' ').replace(':',' ').replace('=',' ').split(' ')))
+        Target = None
+        Min = None
+        while index < len(args):
+            if args[index] == 'boiler':
+                inbex += 1
+                continue
+            if args[index] == 'target':
+                Target = args[index+1]
+                index +=2
+            if args[index] == 'min':
+                Min = args[index+1]
+                index +=2
+            else:
+                index +=1
+        if Target is None or Min is None:
+            return None
+        else:
+            return dict(type = 'Boiler',target=Target,min=Min)
+    elif event.find('Timer:'): # timer event
+        args = list(filter(None, event.lower().replace('+',' + ').replace('-',' - ').replace('timer:','').replace(';',' ').replace(',',' ').replace(':',' ').replace('=',' ').split(' ')))
+        RelayNumber = None
+        Duration = None
+        while index < len(args):
+            if args[index] == 'timer':
+                inbex += 1
+                continue
+            if args[index] == 'duration':
+                Duration = args[index+1]
+                index +=2
+            elif args[index] == 'relaynum':
+                RelayNumber = args[index+1]
+                index +=2
+            elif args[index] in supported_astro:
+                value = args[index]
+                if args[index+1] == '+':
+                    Offset = int(args[index+2])
+                    if Offset < 10:
+                        offet = Offset * 60 # convert from hours to min 
+                    index +=3
+                elif args[index+1] == '-' :
+                    Offset = -1 * int(args[index+2])
+                    if Offset > -10:
+                        offet = Offset * 60 # convert from hours to min 
+                    index +=3
+                else:
+                    Offset = 0
+                    index +=2
+                if len(StartTime) == 0:
+                    StartTime.extend([value,Offset])
+                else:
+                    EndTime.extend([value,Offset])
+            else:
+                index +=1
+        if RelayNumber is None or (Duration is None and len(EndTime) == 0 ):
+            return None
+        else:
+            return dict(type='Timer',Offset = Offset,relay = RelayNumber,duration = Duration, start = StartTime, end = EndTime )
+    else:
+        return None    

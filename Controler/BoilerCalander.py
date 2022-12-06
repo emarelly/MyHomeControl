@@ -45,7 +45,7 @@ class BoilerTask :
           return (retva)
 
    def __eq__(self, other_task):
-       if(other_task == None):
+       if(other_task is None):
            return False
        if self.dayOfWeek != other_task.dayOfWeek:
            return False
@@ -57,7 +57,7 @@ class BoilerTask :
            return False
        return True
    def __ne__(self, other_task):
-       if(other_task == None):
+       if(other_task is None):
            return True
        if self.dayOfWeek != other_task.dayOfWeek:
            return True
@@ -169,7 +169,7 @@ class BoilerCalander(object):
       #operator overloading
       def __eq__(self, other_Cal):
          i = 0
-         if other_Cal == None:
+         if other_Cal is None:
              return False
          for task in other_Cal.boilerTasks:
              if task != self.boilerTasks[i]:
@@ -178,7 +178,7 @@ class BoilerCalander(object):
          return True
       def __ne__(self, other_Cal):
          i = 0
-         if other_Cal == None:
+         if other_Cal is None:
              return False
          for task in other_Cal.boilerTasks:
              if task != self.boilerTasks[i]:
@@ -219,4 +219,3 @@ class BoilerCalander(object):
             for t in removedtasks:
                 retval = retval + newline + t.tostring()
           return retval
- 

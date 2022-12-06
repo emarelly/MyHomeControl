@@ -12,7 +12,7 @@ import traceback
 import string
 import remoteSSH
 import requests
-from ControlerConfig import Config
+import Config
 from oauth2client import client
 from oauth2client import tools
 from oauth2client.file import Storage
@@ -31,7 +31,7 @@ def Get(url):
         x = requests.get(url)
         return x.text
     except:
-        return 'fail to get data'
+        return '{"Status": "fail to connect to Manager"}'
     
 def Post(url,filename=None,json=None):
     try:
@@ -131,7 +131,7 @@ class ProcessControler(object):
                         if (currentStatus["Status"].lower() == "on"):
                                 #Body = "Hello, \r\nThe boiler current number of showers at " + currentStatus.date + " is: " + str(float(currentStatus.capacity[0]) / 10) + " ("+ str(currentStatus.capacity[1]) + "%) \r\nThe Boiler Heater is currently " + currentStatus.boilerrelay + "\r\n"
                                 Body = 'Hello, \r\nThe boiler current status is: \r\n' + str(currentStatus) + "\r\n"
-                                mailclient.SendMessage(MailSubect = "Bolier Service status", MailBody = Body, MailTo = msg.Mailfrom)
+                                mailclient.SendMessage(MailSubect = self.two_factor_string, MailBody = Body, MailTo = msg.Mailfrom)
                         else:
                                 Body = "Hello, \r\nThe boiler service is not active error " + str(currentStatus) + "\r\n"
                                 mailclient.SendMessage(MailSubect = "Bolier Service status error", MailBody = Body, MailTo = msg.Mailfrom)
@@ -146,7 +146,7 @@ class ProcessControler(object):
                         if (currentStatus["Status"].lower() == "on"):
                                 #Body = "Hello, \r\nThe boiler current number of showers at " + currentStatus.date + " is: " + str(float(currentStatus.capacity[0]) / 10) + " ("+ str(currentStatus.capacity[1]) + "%) \r\nThe Boiler Heater is currently " + currentStatus.boilerrelay + "\r\n"
                                 Body = 'Hello, \r\nThe boiler current status is: \r\n' + str(currentStatus) + "\r\n"
-                                mailclient.SendMessage(MailSubect = "Bolier Service status", MailBody = Body, MailTo = msg.Mailfrom)
+                                mailclient.SendMessage(MailSubect = self.two_factor_string, MailBody = Body, MailTo = msg.Mailfrom)
                         else:
                                 Body = "Hello, \r\nThe boiler service is not active error " + str(currentStatus) + "\r\n"
                                 mailclient.SendMessage(MailSubect = "Bolier Service status error", MailBody = Body, MailTo = msg.Mailfrom)
@@ -245,7 +245,7 @@ def main():
                      keepaliveCount = keepaliveCount +1
                      print('monitor status test at '+ datetime.datetime.now().isoformat())
                      Pistatus = json.loads(Get(Config.GetStatusURL))
-                     if Pistatus['status'].lower() != 'on':
+                     if Pistatus['Status'].lower() != 'on':
                                 keepaliveCount = 0
                                 count= count + 1
                                 # if pi is down send email alert to admin
@@ -258,7 +258,7 @@ def main():
                            
                      else:
                        keepaliveCount = 0
-               if(Pistatus['status'].lower() == 'on'):
+               if(Pistatus['Status'].lower() == 'on'):
                             count = 0
                             # Process email requests
                             process.Processemail(mailclient = Mailclient)
@@ -266,11 +266,12 @@ def main():
                             process.ProcessCalendar(calclient = CalClient, mailclient = Mailclient)
                else:
                            Pistatus = json.loads(Get(Config.GetStatusURL))
-                           if (Pistatus['status'].lower() == 'on'):
+                           if (Pistatus['Status'].lower() == 'on'):
                                 Mailclient.SendMessage(MailSubect = "Connection to PI restored",MailBody= "Hello, \r\n The connection to pi was restored.",MailTo = Config.AdminEmailList)
                 
            except  :
-               print ('main loop Exception error:' + sys.exc_info()[1].message)
+               print("main loop Exception error: " + traceback.format_exc())
+               #print ('main loop Exception error:' + str(sys.exc_info()[2]))
            time.sleep(Config.RefreshTime) 
 
     

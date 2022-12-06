@@ -110,7 +110,7 @@ class Switch (object):
 			CurrentDate = datetime.datetime.now() 
 			strTime4Log = " " + datetime.datetime.ctime(CurrentDate) +  " : " 
 			print (strTime4Log + "Starting Timer Monitor for relay " + str(relaynum) + " ....")
-			auditfilename = 'relayAudit' + str(relaynum) + '.log' 
+			auditfilename = Config.AuditFileName + str(relaynum) + '.log' 
 			audit = open(auditfilename, "a")
 			audit.write(strTime4Log + "Starting Timer Monitor for relay " + str(relaynum) + " ....")
 			audit.flush()

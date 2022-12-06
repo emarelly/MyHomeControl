@@ -5,13 +5,14 @@ import time
 import json
 import sys
 import os.path
+import datetime 
 from itertools import islice
 from collections import deque
 import BoilerStatus
 import BoilerCalander
 import TimerCalander
 import controlrelay
-from ManagerConfig import Config
+import Config
 # utils functions
 # file head implmentatioin 
 def head(filename,NOFlines=150): 
@@ -36,6 +37,8 @@ def genmanualcal(hours=3, temp=4,filename='manual.json'):
         if CurentDayOfWeek == 8 :
             CurentDayOfWeek = 1
         hr = currentTime.hour + hours
+        if currentTime.minute > 29:
+           hr += 1
         if hr >= 24:
             hr = hr - 24
             CurentDayOfWeek += 1
@@ -94,9 +97,9 @@ class BoilerRestHTTPRequestHandler(BaseHTTPRequestHandler):
             if query_components is not None and query.find('relay') >=0 :
                 relay = query_components['relay'] 
                 if(controlrelay.ReadRelay(int(query_components['relay']))) == 0:
-                    out = 'Relay ' + str(query_components['relay'])  + 'is off \r\n' +  tail('relayAudit' + query_components['relay'] + '.log',20)
+                    out = 'Relay ' + str(query_components['relay'])  + 'is off \r\n' +  tail(Config.AuditFileName + query_components['relay'] + '.log',20)
                 else:
-                    out = 'Relay ' + str(query_components['relay'])  + 'is on \r\n' +  tail('relayAudit' + query_components['relay'] + '.log',20)
+                    out = 'Relay ' + str(query_components['relay'])  + 'is on \r\n' +  tail(Config.AuditFileName + query_components['relay'] + '.log',20)
             else:
                 out = 'missing parameter'
         else:
@@ -143,5 +146,5 @@ class BoilerRestHTTPRequestHandler(BaseHTTPRequestHandler):
 
 
 def runserver(status):
-    httpd = http_server('localhost', 8000, status)
+    httpd = http_server('0.0.0.0', 8000, status)
     httpd.serve_forever()

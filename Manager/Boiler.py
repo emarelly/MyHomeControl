@@ -10,19 +10,19 @@ import ReadBoilerTemp
 import controlrelay
 import BoilerCalander
 import BoilerStatus
-from ManagerConfig import Config
+import Config
 
      
-class Boiler(object):
+class Boiler:
 	# Generic Utiles
 	#    
 	def __init__(self,status):
-       self.status = status
-       self.CurrentTemp  = [-1,-1,-1]
-       self.CurretnShowers = 0
+		self.status = status
+		self.CurrentTemp  = [-1,-1,-1]
+		self.CurretnShowers = 0
     
 	def GetCurrentTemp(self):	
-        try:
+         try:
             aList = ReadBoilerTemp.GetShowers()
             if aList[4] == -1:
                 self.CurrentTemp  = [-1,-1,-1]
@@ -30,7 +30,7 @@ class Boiler(object):
             else:
                 self.CurrentTemp  = aList[0:3]
                 self.CurretnShowers = aList[4]
-        except:
+         except:
             print ("GetCurrentTemp Exception")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
@@ -39,11 +39,11 @@ class Boiler(object):
     
 	@staticmethod
 	def SetRelay(PortNum,PostValue,offsetport=1):	
-        if PostValue ==0:
+         if PostValue ==0:
             controlrelay.SetRelayOff(PortNum)
             if offsetport > 0:
                 controlrelay.SetRelayOff(PortNum+offsetport)
-        else:
+         else:
             controlrelay.SetRelayOn(PortNum) 
             if offsetport > 0:
                 controlrelay.SetRelayOn(PortNum+offsetport)   
@@ -64,13 +64,13 @@ class Boiler(object):
 				CurentDayOfWeek = CurrentDate.weekday() + 2
 				if CurentDayOfWeek == 8 :
 					CurentDayOfWeek = 1
-				calevent = offsetcalander(calevents,CurentDayOfWeek)
+				calevent = Boiler.offsetcalander(calevents,CurentDayOfWeek)
 				events = calevent.boilerTasks
 				nextevent = None
 				for event in events:
 					if event.dayOfWeek > 1 or (event.dayOfWeek == 1 and datetime.datetime.strptime(event.hour, '%H:%M:%S').time() > currentTime) :
 						nextevent = event
-					break
+						break
 				if nextevent != None:
 					targettemp = nextevent.target
 					mintemp =  nextevent.min
@@ -88,9 +88,9 @@ class Boiler(object):
 	def offsetcalander(calevent,dayofweek):
 		events = calevent.tasks(copy=True)
 		for event in events:
-			event.dayOfWeek -= (dayofweek-1)
-		if event.dayOfWeek <= 0:
-			event.dayOfWeek += 7
+		    event.dayOfWeek -= (dayofweek-1)
+		    if event.dayOfWeek <= 0:
+                       event.dayOfWeek += 7
 		return BoilerCalander.BoilerCalander(events)
 
 	def BoilerMonitor(self):
@@ -118,8 +118,11 @@ class Boiler(object):
 			# read temp from ESP module and save it (overcome bug in the ESP controler of mult thread access)
 			MYTermo = ReadBoilerTemp.Temp(60,Config.LogFileName,'http://ESPBoilerControler')
 			Minheatperiod = False
+			CureItem = None
+			time2heat = None
 			while (mQuit == 1):
 				BoilerStatus = controlrelay.ReadRelay(Config.ControlRelayNum)
+				print(BoilerStatus)
 				CurrentDate = datetime.datetime.now() #datetime.datetime.strptime("2015-06-07 00:01:00",'%Y-%m-%d %H:%M:%S') #datetime.datetime.now()
 				currentTime = CurrentDate.time()
 				strTime4Log = " " + datetime.datetime.ctime(CurrentDate) +  " : " #,"%a, %d %b %Y %H:%M:%S") +  " : "
@@ -141,12 +144,13 @@ class Boiler(object):
 				if manualitem == None and os.path.exists(Config.ManualLocalPath): # if manual command time finished remove the file
 					os.remove(Config.ManualLocalPath)
 					Lastmanualmodtime = None
-					CureItem = manualitem or Boiler.GetNextEvent(calevents)
+				CureItem = manualitem or Boiler.GetNextEvent(calevents)
 				if CureItem == None:
+					print(strTime4Log + ' No Event To read' )
 					time.sleep(Config.SampleRateInSec)
 					continue
 				MYTermo.ReadTemp() # read  temp from ESP module via rest api
-				Boiler.GetCurrentTemp()
+				self.GetCurrentTemp()
 				self.status.CurrentShowers = self.CurretnShowers
 				self.status.CurrentTemp = self.CurrentTemp
 				self.status.Status = 'on'
@@ -163,13 +167,13 @@ class Boiler(object):
 						if self.CurretnShowers < CureItem['mintemp']: # if current temp les the min then turn on
 							if BoilerStatus == 0:
 								print (strTime4Log +"Current temp (" + str(self.CurretnShowers) + ") is less than minimum (" + str(CureItem['mintemp']) + ") - turning the boiler on" )
-								SetRelay(Config.ControlRelayNum,1)
+								Boiler.SetRelay(Config.ControlRelayNum,1)
 							else:
 								print(strTime4Log +"Current temp (" + str(self.CurretnShowers) + ") is less than minimum (" + str(CureItem['mintemp']) + ") - but boiler is already on" )
 						elif self.CurretnShowers >= (CureItem['targettemp'] + Config.ThresholdFactor) and self.CurretnShowers >= (CureItem['mintemp'] + Config.ThresholdFactor):   # turn off if reached target value
 							if BoilerStatus == 1:
 								print (strTime4Log +"Current temp (" + str(self.CurretnShowers) + ") reached target temp (" + str(CureItem['targettemp']) + ") turning the boiler off" )
-								SetRelay(Config.ControlRelayNum,0)
+								Boiler.SetRelay(Config.ControlRelayNum,0)
 								Minheatperiod = False
 							else:
 								Minheatperiod = False
@@ -183,25 +187,25 @@ class Boiler(object):
 								print (strTime4Log + "Time To start Boiler (for now): " + dt.strftime('%Y-%m-%d %H:%M:%S %Z') )
 							if time2start <= 0 and time2heat > 0: 
 								if BoilerStatus == 0 :
-									SetRelay(Config.ControlRelayNum,1)
+									Boiler.SetRelay(Config.ControlRelayNum,1)
 									Minheatperiod = True  # avoid on/off cycles during heating to target temp
 									print (strTime4Log +"turning the boiler on to reach target temperature (current = " + str(self.CurretnShowers) + " target = " + str(CureItem['targettemp']))
 								elif self.CurretnShowers >= (CureItem['mintemp'] + Config.ThresholdFactor):
 									if BoilerStatus == 1 :
-										SetRelay(Config.ControlRelayNum,0)
+										Boiler.SetRelay(Config.ControlRelayNum,0)
 									print (strTime4Log +"Current temp reached Min temp turning the boiler off" ) 
 						else:
 							if BoilerStatus == 0 :
-								SetRelay(Config.ControlRelayNum,1)
+								Boiler.SetRelay(Config.ControlRelayNum,1)
 							time2heat = int(float(CureItem['targettemp']  - self.CurretnShowers) / (Config.HeatRate))
 							print (strTime4Log + "time to heat (while heating) " + str(time2heat) + "[Min]")
 						#Update status class
 						self.status.Date = CurrentDate
 						self.status.MinVal = float(CureItem['mintemp'])
 						if BoilerStatus==0: 
-          					self.status.HeaterOnOff ='Off'
+          					   self.status.HeaterOnOff ='Off'
 						else: 
-                  			self.status.HeaterOnOff ='On'
+                  			           self.status.HeaterOnOff ='On'
 						self.status.TargetVal = float(CureItem['targettemp'])
 						self.status.TimeToStartMin = time2heat
 						time.sleep(Config.SampleRateInSec)
