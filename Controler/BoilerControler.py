@@ -222,8 +222,9 @@ class ProcessControler(object):
             return 
         print ('ProcessCalendar: saving to prev')  
         self.Timerprevcal = currentTimercal
+        self.Timerprevcal.save(filename=Config.TimerCalendarLocalPath)
         # UpdateJson
-        Post(PostUpdateRelayURL,filename=Config.TimerCalendarLocalPath)
+        Post(Config.PostUpdateRelayURL,filename=Config.TimerCalendarLocalPath)
         return 
             
 
@@ -235,7 +236,9 @@ def main():
         CalClient =  ReadGmailCalendar.ReadGmailCalendar(Config.CLIENT_SECRET_FILE)
         process = ProcessControler()
         #resault = Mailclient.SendMessage(MailSubect ="Bolier Phyton Service was started", MailBody = "I am up Now :)",MailTo = Config.AdminEmailList)
-        Pistatus = json.loads(Get(Config.GetStatusURL))
+        status = Get(Config.GetStatusURL)
+        print (status)
+        Pistatus = json.loads(status)
         keepaliveCount = 0
         KeepAlivefactor = 3600/ Config.RefreshTime # keep alive every hour on when need to change status
         while (True):

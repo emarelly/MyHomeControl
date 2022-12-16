@@ -219,3 +219,4 @@ class BoilerCalander(object):
             for t in removedtasks:
                 retval = retval + newline + t.tostring()
           return retval
+ 

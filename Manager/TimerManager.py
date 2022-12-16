@@ -10,7 +10,7 @@ import traceback
 import sys
 import threading
 import RealyMap
-from ManagerConfig import Config
+import Config
 
 #TimerCalendarLocalPath = 'X:\Boiler\TimeCal.json'
 #TimerManualLocalPath = 'E:\TimerProject\PiCode\TimerControler\manual.json'
@@ -18,9 +18,9 @@ from ManagerConfig import Config
 
 class Switch (object):
 	def __init__(self,relynum):
-       self.calevents = TimerCalander.TimerCalander()
-       self.manualvent = TimerCalander.TimerCalander()
-       self.relaynum = status
+           self.calevents = TimerCalander.TimerCalander()
+           self.manualvent = TimerCalander.TimerCalander()
+           self.relaynum = status
        
 	@staticmethod
 	def SetRelay(PortNum,PostValue,offsetport=1):
@@ -85,16 +85,16 @@ class Switch (object):
 
 	@staticmethod
 	def offsetcalander(calevent,dayofweek):
-     	try:
-         events = calevent.tasks(copy=True)
-         for event in events:
-           		event.dayOfWeek -= (dayofweek-1)
-             if event.dayOfWeek <= 0:
-                  	event.dayOfWeek += 7
-        	return TimerCalander.TimerCalander(events)
-     	except:
-           print('offsetcalander exception '  + traceback.format_exc())
-           return None
+           try:
+             events = calevent.tasks(copy=True)
+             for event in events:
+                event.dayOfWeek -= (dayofweek-1)
+                if event.dayOfWeek <= 0:
+                   event.dayOfWeek += 7
+             return TimerCalander.TimerCalander(events)
+           except:
+             print('offsetcalander exception '  + traceback.format_exc())
+             return None
 
 ##  Main loop ####
 ##################
@@ -224,8 +224,9 @@ for i in range(2,len(threadsstatus)):
         tr.start()
         threads.append(tr)
         threadsstatus[i] = tr.native_id
-#monitor for new switches or restart exited threads    
-while(true):
+#monitor for new switches or restart exited threads 
+modtime = None   
+while(True):
 	for i in range(2,len(threadsstatus)):
 		# corner case
 		if threadsstatus[i] < 0: # thread exit unexpectdly start it again
@@ -249,18 +250,18 @@ while(true):
 				events.load(filename=Config.TimerCalendarLocalPath)
 				print ("calendar file was changed, reading the updated Json")
 				if Switch.GetNextEvent(events,True,i) is not None: #event exist for this swithc atart thread to process
-       				print ('starting thread ' + str (i))
-        			tr  = threading.Thread(target = runrealymonitor, args = [threadsstatus,str(i)])
-        			tr.start()
-       				threads.append(tr)
-       				threadsstatus[i] = tr.native_id  
-    LastCalmodtime = modtime
+       				   print ('starting thread ' + str (i))
+        			   tr  = threading.Thread(target = runrealymonitor, args = [threadsstatus,str(i)])
+        			   tr.start()
+       				   threads.append(tr)
+       				   threadsstatus[i] = tr.native_id  
+	LastCalmodtime = modtime
 	# thread list cleanup
 	for x in range(len(threads)):
 		if threads[x] is None | threads[x] =='':
-    		continue
+			continue
 		if threads[x].is_alive() == False:
-		   threads.pop(x)
-		   x= x-1
+			threads.pop(x)
+			x= x-1
 
 print ("exit Timer Monitor!!!")

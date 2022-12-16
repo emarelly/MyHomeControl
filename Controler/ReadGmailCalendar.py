@@ -106,7 +106,7 @@ class ReadGmailCalendar(object):
                     # add start event
                     #print('duration is ' + ev['duration'] + ' relay = ' + ev['relay'] + ' day = ' + str(day))
                     time = '{:02d}'.format(date.hour) + ":" + '{:02d}'.format(date.minute) + ":" + '{:02d}'.format(date.second) 
-                    ttask = TimerCalander.TimerTask(dayOfWeek=day,hour = time,relaynum=relaynum,state=1)
+                    ttask = TimerCalander.TimerTask(dayOfWeek=day,hour = time,relaynum=ev['relay'],state=1)
                     Timertasks.append(ttask)
                     # add stop event
                     date = date + datetime.timedelta(seconds = int(ev['duration']))
@@ -135,11 +135,13 @@ def parseevent(event):
     StartTime = []
     EndTime = []
     Offset = 0
-    if event.find('Boiler:'):
+    #print('parseevent: ' + event)
+    if event.find('Boiler:')>= 0:
     #Bolier event
         args = list(filter(None, event.lower().replace('+',' + ').replace('-',' - ').replace('boiler:','').replace(';',' ').replace(',',' ').replace(':',' ').replace('=',' ').split(' ')))
         Target = None
         Min = None
+        #print('found  ' + str(len(args)) + 'args' + str(args))
         while index < len(args):
             if args[index] == 'boiler':
                 inbex += 1
@@ -156,7 +158,7 @@ def parseevent(event):
             return None
         else:
             return dict(type = 'Boiler',target=Target,min=Min)
-    elif event.find('Timer:'): # timer event
+    elif event.find('Timer:') >= 0	: # timer event
         args = list(filter(None, event.lower().replace('+',' + ').replace('-',' - ').replace('timer:','').replace(';',' ').replace(',',' ').replace(':',' ').replace('=',' ').split(' ')))
         RelayNumber = None
         Duration = None

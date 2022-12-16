@@ -6,7 +6,7 @@ import time
 import signal
 import datetime
 import subprocess
-
+import traceback
 
 def proct(pid):
     try:
@@ -60,49 +60,49 @@ def CheckProcess():
   control = 0
   for pid in pids:
     try:
-        file = open(os.path.join('/proc', pid, 'cmdline'), 'rb').read()
+        file = str(open(os.path.join('/proc', pid, 'cmdline'), 'rb').read())
         #print file
         if(file.count("BoilerControler.py") > 0):
           count=count+1
           control=pid
-          print "found " + str(control)
+          print ("found " + str(control))
     except:
-        print "error get pid"
-  return [count,control]
+        print ("error get pid")
+  return [count,int(control)]
 
 def restart():
    command = "/usr/bin/sudo shutdown -r now"
    #import subprocess
    process = subprocess.Popen(command.split(), stdout=subprocess.PIPE)
    output = process.communicate()[0]
-   print output
+   print (output)
    #print "restart called Demo"
 
 
 def ReStartApp():
     try:
-      print "running check process" 
+      print ("running check process") 
       process = CheckProcess()
-      print " pre=" + str(process)
+      print (" pre=" + str(process))
       while process[0] > 0:  
         if(process[1] > 0):
             os.kill(int(process[1]), signal.SIGKILL)
-            print str(process[1]) + " was killed (BoilerControler)"
+            print (str(process[1]) + " was killed (BoilerControler)")
         process = CheckProcess()
-      subprocess.Popen(["sudo","/home/pi/BoilerControler/StartBoilerControler.sh"])
-      print "Boiler control Started"
+      subprocess.Popen(["/home/pi/BoilerControler/StartBoilerControler.sh"])
+      print ("Boiler control Started")
   
     except:
-      print "Exec error: ",sys.exc_info()[0]
+      print ("Exec error: " + traceback.format_exc())
 
 
 # main
-print "*******" + str(datetime.datetime.now()) + "************"
-print "verifying processes..."
+print ("*******" + str(datetime.datetime.now()) + "************")
+print ("verifying processes...")
 process = CheckProcess()
-print str(process) 
-if(process[0] <> 2):
-     print "not all process are running  - restarting app"
+print (str(process)) 
+if(process[0] !=2):
+     print ("not all process are running  - restarting app")
      ReStartApp()
 else:
-    print "All ok "
+    print ("All ok ")

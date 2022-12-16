@@ -34,5 +34,5 @@ def runcommand(hostname, username,password, port = 22, command = 'ls'):
 	ret.extend(stdout_data)
 	ret.extend(stderr_data) 
 	return ret
-#status = runcommand('marellypi','pi','kerenm1',22,'python /home/pi/Boiler/manualrelaynoff.py 2')
+
 #print (''.join(status))

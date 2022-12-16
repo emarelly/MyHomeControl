@@ -1,3 +1,3 @@
 cd /home/pi/BoilerControler/
-sudo python /home/pi/BoilerControler/BoilerControlerWD.py >> /home/pi/BoilerControler/BoilerControlerWD.log &
+sudo python3 -u /home/pi/BoilerControler/BoilerControlerWD.py >> /home/pi/BoilerControler/BoilerControlerWD.log &
 

@@ -104,7 +104,7 @@ class GmailMessages(object):
       msg = MIMEText(message_text)
       message.attach(msg)
 
-      if file <> "":
+      if file != "":
           content_type, encoding = mimetypes.guess_type(file)
 
           if content_type is None or encoding is not None:
@@ -130,7 +130,8 @@ class GmailMessages(object):
           filename = os.path.basename(file)
           msg.add_header('Content-Disposition', 'attachment', filename=filename)
           message.attach(msg)
-      return {'raw': base64.urlsafe_b64encode(message.as_string())}
+      #return {'raw': base64.urlsafe_b64encode(message.as_string())} # python .2.7
+      return {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode()} # python 3
 
     def send_message(self,service, user_id, message):
       """Send an email message.
@@ -149,7 +150,7 @@ class GmailMessages(object):
                    .execute())
         print ('Message sent Id: ' + str(message['id']))
         return message
-      except errors.HttpError, error:
+      except errors.HttpError as error:
         print ('An error occurred: ' + str(error))
 
     def ReadMessages(self,delete=True):
@@ -159,13 +160,33 @@ class GmailMessages(object):
         messages = self.ListMessagesMatchingQuery(service,"me","in:inbox",delete)
         messgelist = []
         for msg in messages:
+           
            message = service.users().messages().get(userId="me", id=msg["id"],
-                                             format='raw').execute()
+                                             format='full').execute()
 
-           #print ('Message snippet:' +  message['snippet'])
-           msg_str = base64.urlsafe_b64decode(message['raw'].encode('ASCII'))
-           mime_msg = email.message_from_string(msg_str)
-           emsg = EmailMessage(mfrom = mime_msg['From'],to=mime_msg['To'],subject=mime_msg['Subject'],body=message['snippet'],date=mime_msg['Date'])
+           payload = message['payload']
+           headers = payload['headers']
+           # Look for Subject and Sender Email in the headers
+           for d in headers:
+                if d['name'] == 'Subject':
+                    subject = d['value']
+                    #print('subject: ' + str(subject))
+                elif d['name'] == 'From':
+                    sender = d['value']
+                    #print('sender: ' + str(sender))
+                elif d['name'] == 'Date':
+                    emaildate = d['value']
+                    #print('emaildate: ' + str(emaildate))
+                elif d['name'] == 'Delivered-To':
+                    deliveredTo = d['value']
+                    #print('deliveredTo: ' + str(deliveredTo))
+                    
+  
+           # Get the data and decode it with base 64 decoder.
+           emailbody = base64.b64decode(payload.get('parts')[0]['body']['data'].replace("-","+").replace("_","/"))
+           #print('decoded_data: ' + str(emailbody))
+           emsg = EmailMessage(mfrom = sender,to=deliveredTo,subject=subject,body=emailbody,date=emaildate)
+           #emsg = EmailMessage(mfrom = mime_msg['From'],to=mime_msg['To'],subject=mime_msg['Subject'],body=message['snippet'],date=mime_msg['Date'])
            messgelist.append(emsg)
            if delete:
                self.DeleteMessage(service,"me",message['id'])
@@ -200,7 +221,7 @@ class GmailMessages(object):
               messages.extend(response['messages'])
             
             return messages
-          except errors.HttpError, error:
+          except errors.HttpError as error:
             print ('An error occurred: ' + str(error))
 
     def DeleteMessage(self,service, user_id, msg_id):
@@ -215,5 +236,5 @@ class GmailMessages(object):
           try:
             service.users().messages().delete(userId=user_id, id=msg_id).execute()
             print ('Message with id:  deleted successfully.' + str(msg_id))
-          except errors.HttpError, error:
+          except errors.HttpError as error:
             print ('An error occurred: ' + str(error))
