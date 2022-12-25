@@ -5,13 +5,13 @@ import traceback
 import os
 import requests
 # map table url, GPIO #
-import RealyMap
+import RelayMap
 def ReadRelay(RelayNum):
        try:
           #RelayNum = RelayNum -1
-          if len(RealyMap.relaymap) > RelayNum and RelayNum >= 0:
+          if len(RelayMap.relaymap) > RelayNum and RelayNum >= 0:
             print (" ReadRelay " + str(RelayNum))
-            ret = GetGPIOFromESP(RealyMap.relaymap[RelayNum][0],RealyMap.relaymap[RelayNum][1])
+            ret = GetGPIOFromESP(RelayMap.relaymap[RelayNum][0],RelayMap.relaymap[RelayNum][1])
             print (" ReadRelay value " + str(ret))
             return(ret)
        except:
@@ -40,9 +40,9 @@ def ReadRelay1Wire(RelayNum):
 def SetRelayOn(RelayNum):
        try:
           #RelayNum = RelayNum -1
-          if len(RealyMap.relaymap) > RelayNum and RelayNum >= 0:
+          if len(RelayMap.relaymap) > RelayNum and RelayNum >= 0:
             print (" SetRelayOn " + str(RelayNum))
-            ret = SetGPIOFromESP(RealyMap.relaymap[RelayNum][0],RealyMap.relaymap[RelayNum][1],1)
+            ret = SetGPIOFromESP(RelayMap.relaymap[RelayNum][0],RelayMap.relaymap[RelayNum][1],1)
             print (" SetRelayOn value " + str(ret))
             return(ret)
        except:
@@ -55,9 +55,9 @@ def SetRelayOn(RelayNum):
 def SetRelayOff(RelayNum):
       try:
           #RelayNum = RelayNum -1
-          if len(RealyMap.relaymap) > RelayNum and RelayNum >= 0:
+          if len(RelayMap.relaymap) > RelayNum and RelayNum >= 0:
             print (" SetRelayOff " + str(RelayNum))
-            ret = SetGPIOFromESP(RealyMap.relaymap[RelayNum][0],RealyMap.relaymap[RelayNum][1],0)
+            ret = SetGPIOFromESP(RelayMap.relaymap[RelayNum][0],RelayMap.relaymap[RelayNum][1],0)
             print (" SetRelayOff value " + str(ret))
             return(ret)
       except:
@@ -100,6 +100,7 @@ def SetRelayOff1Wire(RelayNum):
           return    
 def GetGPIOFromESP(url,GpioNumber):
     try:
+        #print(url+ '/GetGPIO?id='+ str(GpioNumber))
         r = requests.get(url+ '/GetGPIO?id='+ str(GpioNumber), timeout=10)
         #j = '{ "Temp Sensors": [   {"Temperature": 24.31 ,"Address": "0x2815c22b0600003a"}]}'
         y =r.text.split('=')[1].strip()

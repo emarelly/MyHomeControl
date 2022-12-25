@@ -1,5 +1,8 @@
 import datetime
-import astral
+from astral.sun import sun
+from astral.moon import moonrise
+from astral.moon import moonset
+from astral import LocationInfo
 from geopy.geocoders import Nominatim
 
 
@@ -8,6 +11,7 @@ class addres:
         self.streat  = streat
         self.number = number
         self.city = city
+        self.locationInfo = None
         if timezone == '':
             self.timezone = country
         else:
@@ -34,49 +38,40 @@ class addres:
     def GetLocation(self):
         return self.location
     def Observer(self):
-        return astral.Observer(latitude= self.location.latitude,longitude= self.location.longitude)
-def GetAstro(Astrotype,date,observer):
-    if Astrotype == 'moonrise':
-        return astral.moon.moonrise(observer,date) + (datetime.datetime.now() - datetime.datetime.utcnow())
-    if Astrotype == 'moonset':
-        return astral.moon.moonset(observer,date) + (datetime.datetime.now() - datetime.datetime.utcnow())
-    if Astrotype == 'dusk':
-        return astral.sun.dusk(observer,date) + (datetime.datetime.now() - datetime.datetime.utcnow())
-    if Astrotype == 'dawn':
-        return astral.sun.dawn(observer,date) + (datetime.datetime.now() - datetime.datetime.utcnow())
-    if Astrotype == 'sunset':
-        return astral.sun.sunset(observer,date) + (datetime.datetime.now() - datetime.datetime.utcnow())
-    if Astrotype == 'sunrise':
-        return astral.sun.sunrise(observer,date) + (datetime.datetime.now() - datetime.datetime.utcnow())
-    if Astrotype == 'twilight':
-        return astral.sun.twilight(observer,date) + (datetime.datetime.now() - datetime.datetime.utcnow())
-    if Astrotype == 'midnight':
-        return astral.sun.midnight(observer,date) + (datetime.datetime.now() - datetime.datetime.utcnow())
-    if Astrotype == 'noon':
-        return astral.sun.noon(observer,date) + (datetime.datetime.now() - datetime.datetime.utcnow())
-    return None
-
-def Getmoonrise(dt,observer):
-    astral.moon.moonrise(observer,dt) + (datetime.datetime.now() - datetime.datetime.utcnow())
-def Getmoonset(dt,observer):
-    astral.moon.moonset(observer,dt) + (datetime.datetime.now() - datetime.datetime.utcnow())
-def Getdusk(dt,observer):
-    astral.sun.dusk(observer,dt) + (datetime.datetime.now() - datetime.datetime.utcnow())
-def Getdawn(dt,observer):
-    astral.sun.dawn(observer,dt) + (datetime.datetime.now() - datetime.datetime.utcnow())
-def Getsunset(dt,observer):
-    astral.sun.sunset(observer,dt) + (datetime.datetime.now() - datetime.datetime.utcnow())
-def Getsunrise(dt,observer):
-    astral.sun.sunrise(observer,dt) + (datetime.datetime.now() - datetime.datetime.utcnow())
-def Gettwilight(dt,observer): # solar midnight
-    astral.sun.twilight(observer,dt) + (datetime.datetime.now() - datetime.datetime.utcnow())
-def Getmidnight(dt,observer):
-    astral.sun.midnight(observer,dt) + (datetime.datetime.now() - datetime.datetime.utcnow())
-def Getnoon(dt,observer): # solar noon = highest point
-    astral.sun.noon(observer,dt) + (datetime.datetime.now() - datetime.datetime.utcnow())
+        if self.locationInfo is None:
+           self.locationInfo = LocationInfo(self.location.latitude, self.location.longitude)
+        return self.locationInfo.observer
+### utility functions #####
+def GetAstro(astrotype,date,observer,offset = 0):
+    #m =  moon(observer,date)
+    s = sun(observer,date)
+    if astrotype == 'moonrise':
+        val = moonrise(observer, date) + (datetime.datetime.now() - datetime.datetime.utcnow() )
+    elif astrotype == 'moonset':
+        val = moonset(observer, date) + (datetime.datetime.now() - datetime.datetime.utcnow())
+    elif astrotype == 'dusk':
+        val = s['dusk'] + (datetime.datetime.now() - datetime.datetime.utcnow())
+    elif astrotype == 'dawn':
+        val = s['dawn'] + (datetime.datetime.now() - datetime.datetime.utcnow())
+    elif astrotype == 'sunset':
+        val = s['sunset'] + (datetime.datetime.now() - datetime.datetime.utcnow())
+    elif astrotype == 'sunrise':
+        val = s['sunrise'] + (datetime.datetime.now() - datetime.datetime.utcnow())
+    elif astrotype == 'twilight':
+        val = s['twilight'] + (datetime.datetime.now() - datetime.datetime.utcnow())
+    elif astrotype == 'midnight':
+        val = s['midnight'] + (datetime.datetime.now() - datetime.datetime.utcnow())
+    elif astrotype == 'noon':
+        val = s['noon'] + (datetime.datetime.now() - datetime.datetime.utcnow())
+    else:
+        return None
+    if (offset < 0):
+        return val- datetime.timedelta(minutes=offset)
+    else:
+        return val + datetime.timedelta(minutes=offset)
   
 ###### example  #########
 ##addr = addres(streat = 'hazamir',country='israel',city='ramat gan',timezone='jerusalem')
 ##dt = datetime.date.today()
-##dawn = Getdown(dt,addr.Observer())
+##dawn = GetAstro('dawn',dt,addr.Observer())
 ##################################

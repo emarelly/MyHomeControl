@@ -48,11 +48,11 @@ def ReStartApp():
 		while process[0] > 0:
 			try:
 				if(int(process[1]) > 0):
-					os.kill(int(process[4]), signal.SIGKILL)
-					print (str(process[4]) + " was killed (Manager)")
+					os.kill(int(process[1]), signal.SIGKILL)
+					print (str(process[1]) + " was killed (Manager)")
 				if(int(process[2]) > 0):
-					os.kill(int(process[5]), signal.SIGKILL)
-					print (str(process[5]) + " was killed (Timer)")
+					os.kill(int(process[2]), signal.SIGKILL)
+					print (str(process[2]) + " was killed (Timer)")
 				#subprocess.check_call(["sudo","kill " + str(process[3])])
 				process = CheckProcess()
 			except:

@@ -7,6 +7,10 @@ import BoilerCalander
 import TimerCalander
 import json
 import traceback
+import Astro
+import Config
+import Name2RelayNum 
+
 from datetime import timedelta
 from apiclient import discovery
 from oauth2client import client
@@ -79,6 +83,7 @@ class ReadGmailCalendar(object):
                 print('No upcoming events found.')
             Boilertasks=[]
             Timertasks=[]
+            location = Astro.addres(streat = Config.Street,country=Config.Country,city=Config.City,timezone=Config.TimeZone)
             for event in events:
                 data = event['summary']
                 strdate = event['start'].get('dateTime', event['start'].get('date'))
@@ -103,18 +108,34 @@ class ReadGmailCalendar(object):
                         day = 1
                     else:
                         day = date.weekday() + 2
+                    sttime = None
+                    if len(ev['start']) > 1:
+                        sttime = Astro.GetAstro(astrotype= ev['start'][0], date = date, observer = location.Observer(),offset =ev['start'][1]) 
+                    if sttime is None:
+                        sttime = date
+                    time = '{:02d}'.format(sttime.hour) + ":" + '{:02d}'.format(sttime.minute) + ":" + '{:02d}'.format(sttime.second) 
                     # add start event
                     #print('duration is ' + ev['duration'] + ' relay = ' + ev['relay'] + ' day = ' + str(day))
-                    time = '{:02d}'.format(date.hour) + ":" + '{:02d}'.format(date.minute) + ":" + '{:02d}'.format(date.second) 
-                    ttask = TimerCalander.TimerTask(dayOfWeek=day,hour = time,relaynum=ev['relay'],state=1)
-                    Timertasks.append(ttask)
+                    for relay in ev['relay']:
+                        ttask = TimerCalander.TimerTask(dayOfWeek=day,hour = time,relaynum=relay,state=1)
+                        Timertasks.append(ttask)
                     # add stop event
-                    date = date + datetime.timedelta(seconds = int(ev['duration']))
-                    time = '{:02d}'.format(date.hour) + ":" + '{:02d}'.format(date.minute) + ":" + '{:02d}'.format(date.second) 
-                    ttask = TimerCalander.TimerTask(dayOfWeek=day,hour = time,relaynum=ev['relay'],state=0)
-                    Timertasks.append(ttask)
-                    #start = event['start'].get('dateTime', event['start'].get('date'))
-                #print(start, event['summary'])
+                    endtime = None
+                    if len(ev['end']) > 1:
+                        if str(type(ev['end'][0])) == "<class 'str'>":
+                            endtime = Astro.GetAstro(astrotype= ev['end'][0], date = date, observer = location.Observer(),offset =ev['end'][1]) 
+                        else:
+                            endtime = datetime.datetime( date.year,date.month, date.day, ev['end'][0].hour,ev['end'][0].minute,ev['end'][0].second,tzinfo=datetime.timezone(offset=datetime.timedelta()))
+                    if endtime is None:
+                        endtime = date + datetime.timedelta(seconds = int(ev['duration']))
+                    time = '{:02d}'.format(endtime.hour) + ":" + '{:02d}'.format(endtime.minute) + ":" + '{:02d}'.format(endtime.second) 
+                    if endtime < sttime: #if end is before start add 1 day
+                        day +=1
+                        if day > 7:
+                            day = 1
+                    for relay in ev['relay']:
+                        ttask = TimerCalander.TimerTask(dayOfWeek=day,hour = time,relaynum=relay,state=0)
+                        Timertasks.append(ttask)
             bCalander = BoilerCalander.BoilerCalander(tasks=Boilertasks)
             tCalander = TimerCalander.TimerCalander(tasks=Timertasks)
             print(" read " + str(len(Boilertasks)) + " Boiler events")  
@@ -160,42 +181,100 @@ def parseevent(event):
             return dict(type = 'Boiler',target=Target,min=Min)
     elif event.find('Timer:') >= 0	: # timer event
         args = list(filter(None, event.lower().replace('+',' + ').replace('-',' - ').replace('timer:','').replace(';',' ').replace(',',' ').replace(':',' ').replace('=',' ').split(' ')))
-        RelayNumber = None
+        RelayNumber = []
         Duration = None
+        isend = False
         while index < len(args):
             if args[index] == 'timer':
                 inbex += 1
                 continue
-            if args[index] == 'duration':
+            if args[index] == 'end':
+                resault = GetEndTime(args,index+1)
+                if resault[1] is not None:
+                    EndTime.extend([resault[1],0])
+                    isend = False
+                else:
+                    isend = True
+                index = resault[0]
+            elif args[index] == 'start':
+                isend = False
+                index += 1
+            elif args[index] == 'duration':
                 Duration = args[index+1]
                 index +=2
             elif args[index] == 'relaynum':
-                RelayNumber = args[index+1]
-                index +=2
+                resault = GetRealys(args,index+1)
+                RelayNumber = resault[1]
+                index = resault[0]
             elif args[index] in supported_astro:
                 value = args[index]
+                Offset = 0
                 if args[index+1] == '+':
-                    Offset = int(args[index+2])
-                    if Offset < 10:
-                        offet = Offset * 60 # convert from hours to min 
-                    index +=3
+                    if args[index+2].isnumeric() == True:
+                        Offset = int(args[index+2])
+                        if Offset < 10 and len(args[index+2]) < 2: # number 1-9 without leading 0 consider hours
+                            offet = Offset * 60 # convert from hours to min 
+                        index +=3
+                    else:
+                        index +=2
                 elif args[index+1] == '-' :
-                    Offset = -1 * int(args[index+2])
-                    if Offset > -10:
-                        offet = Offset * 60 # convert from hours to min 
-                    index +=3
+                    if args[index+2].isnumeric() == True:
+                        Offset = -1 * int(args[index+2])
+                        if Offset > -10 and len(args[index+2]) < 2: # number 1-9 without leading 0 consider hours
+                            offet = Offset * 60 # convert from hours to min 
+                        index +=3
+                    else:
+                        index +=2
                 else:
-                    Offset = 0
-                    index +=2
-                if len(StartTime) == 0:
+                    index +=1
+                if isend == False or len(StartTime) == 0: # the event consider as start if it is the first or not marked as end 
                     StartTime.extend([value,Offset])
+                    isend = True
                 else:
                     EndTime.extend([value,Offset])
+                    isend = False
             else:
                 index +=1
-        if RelayNumber is None or (Duration is None and len(EndTime) == 0 ):
+        if len(RelayNumber) == 0 or (Duration is None and len(EndTime) == 0 ):
             return None
         else:
             return dict(type='Timer',Offset = Offset,relay = RelayNumber,duration = Duration, start = StartTime, end = EndTime )
     else:
         return None    
+def GetEndTime(args, offset):
+    t = []
+    supported_astro.extend(['start','end','duration','relaynum'])
+    keys = supported_astro
+    while offset < len(args):
+        if args[offset] in keys: # get all relay numbers and names (converted) till you find a known key
+            break
+        if args[offset].isnumeric() == True:
+            t.append(args[offset]) 
+        else:
+            break 
+        offset+=1
+    if len(t) > 0:
+        for x in range(3-len(t)): 
+            t.append(0)
+        endtime = datetime.time(hour=int(t[0]),minute=int(t[1]),second=int(t[2])) 
+    else:
+        endtime = None
+    return [offset,endtime]
+    
+def GetRealys(args, offset):
+    relays = []
+    supported_astro.extend(['start','end','duration','relaynum'])
+    keys = supported_astro
+    while offset < len(args):
+        if args[offset] in keys: # get all relay numbers and names (converted) till you find a known key
+            break
+        if args[offset].isnumeric() == True:
+            relays.append(args[offset]) 
+        else:
+            for name in Name2RelayNum.Name2RelayNum:
+                if name[0].lower().strip() == args[offset]:
+                    relays.append(name[1])
+                    break
+        offset+=1
+    
+    return [offset,relays]

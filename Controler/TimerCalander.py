@@ -127,8 +127,8 @@ class TimerCalander(object):
                fp.write(retval)
           return (retval)
 
-      def load(self, filename=""):
-          if filename != "":
+      def load(self, filename='', json = '' ):
+          if len(filename) > 0:
               if os.path.exists(filename):
                 with open(filename, 'r') as fp:
                   jsons = fp.read()
@@ -138,9 +138,16 @@ class TimerCalander(object):
                     tsk.append(TimerTask(json=jtask))
                   self.timerTasks = tsk
                   self.RemoveDuplicate()
-
-      def save(self, filename=""):
-          if filename != "":
+          elif len(json) > 0:
+                tsk = []
+                jtasks = json.replace('[','').replace(']','').split('},{')
+                for jtask in jtasks:
+                    tsk.append(TimerTask(json=jtask))
+                self.timerTasks = tsk
+                self.RemoveDuplicate()
+                
+      def save(self, filename='s'):
+          if len(filename) > 0:
             with open(filename, 'w') as fp:
                strjson = self.tojson() #,fp,default = myconverter)
                fp.write(strjson)

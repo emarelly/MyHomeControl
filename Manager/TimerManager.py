@@ -9,7 +9,7 @@ import json
 import traceback
 import sys
 import threading
-import RealyMap
+import RelayMap
 import Config
 
 #TimerCalendarLocalPath = 'X:\Boiler\TimeCal.json'
@@ -20,7 +20,7 @@ class Switch (object):
 	def __init__(self,relynum):
            self.calevents = TimerCalander.TimerCalander()
            self.manualvent = TimerCalander.TimerCalander()
-           self.relaynum = status
+           self.relaynum = relynum
        
 	@staticmethod
 	def SetRelay(PortNum,PostValue,offsetport=1):
@@ -40,22 +40,23 @@ class Switch (object):
 			time2nextevent = -1
 			duration = 0
 			if calevents == None:
-				return None
+			    print('GetNextEvent: no events')
+			    return None
 			else:
 				CurrentDate = datetime.datetime.now() 
 				currentTime = CurrentDate.time() 
 				CurentDayOfWeek = CurrentDate.weekday() + 2
 			if CurentDayOfWeek == 8 :
 				CurentDayOfWeek = 1
-			calevent = offsetcalander(calevents,CurentDayOfWeek)
+			calevent = Switch.offsetcalander(calevents,CurentDayOfWeek)
 			events = calevent.timerTasks
 			nextevent = None
 			eventafter = None
-			#print ('found ' + str(len(events)))
+			#print ('found ' + str(len(events)) + 'for relay # ' + str(relaynum))
 			for event in events:
 				#print(event.tostring())
-				if event.relaynum != relaynum:
-					#print ('not the same relay' + str(event.relaynum) + ' ' + str(relaynum))
+				if int(event.relaynum) != int(relaynum):
+					#print ('not the same relay ' + str(event.relaynum) + ' ' + str(relaynum))
 					continue
 				if event.dayOfWeek > 1 or (event.dayOfWeek == 1 and datetime.datetime.strptime(event.hour, '%H:%M:%S').time() > currentTime) :
 					#print('next event =' + event.tostring())
@@ -161,7 +162,7 @@ class Switch (object):
 				RelayStatus = controlrelay.ReadRelay(int(relaynum))
 				if CureItem == None:
 					if RelayStatus == 1:
-						SetRelay(int(relaynum),0) #in case of an error to read calander file turn off the realy
+						Switch.SetRelay(int(relaynum),0) #in case of an error to read calander file turn off the realy
 					time.sleep(Config.TimerSampleRateInSec)
 					continue
 				time2nexteventInMin = int(CureItem['time2nextevent']/60)
@@ -171,20 +172,20 @@ class Switch (object):
 					print (strTime4Log +'relay status not in sync, Relay number = ' +  str(CureItem['relaynum']) + '\n')
 					if RelayStatus == 1:
 						audit.write(strTime4Log + 'switch #' + str(CureItem['relaynum']) + ' was turned off' + '\n')
-						SetRelay(int(relaynum),0,0)
+						Switch.SetRelay(int(relaynum),0,0)
 					else:
 						audit.write(strTime4Log + 'switch #' + str(CureItem['relaynum']) + ' was turned on' + '\n')
-						SetRelay(int(relaynum),1,0)
+						Switch.SetRelay(int(relaynum),1,0)
 					audit.flush()
 				elif CureItem['time2nextevent'] < Config.TimerSampleRateInSec:
 					time.sleep(CureItem['time2nextevent'])
 					print (strTime4Log +'relay status will be changed for relay ' +  str(CureItem['relaynum']) + '\n')
 					if CureItem['state'] == '1':
 						audit.write(strTime4Log + 'switch #' + str(CureItem['relaynum']) + ' was turned on' + '\n')
-						SetRelay(int(relaynum),1,0)
+						Switch.SetRelay(int(relaynum),1,0)
 					else:
 						audit.write(strTime4Log + 'switch #' + str(CureItem['relaynum']) + ' was turned off' + '\n')
-						SetRelay(int(relaynum),0,0)
+						Switch.SetRelay(int(relaynum),0,0)
 					audit.flush()
 					time.sleep(2)	
 				else:
@@ -194,36 +195,41 @@ class Switch (object):
 					else:
 						time.sleep(Config.TimerSampleRateInSec)
 		except:
-			audit.close()
 			print(strTime4Log + "TimerMonitor for relay " + str(relaynum) + " : " + traceback.format_exc())
+			if audit is not None:
+   				audit.close()
 		
 def runrealymonitor(threadsstatus,id):
     sw = Switch(id)
-    sw.TimerMonitor(relaynum)
-    threadsstatus[id] = -1 # if thread exit it becaue of error
+    sw.TimerMonitor(id)
+    threadsstatus[id] = -1 # if thread exit it because of error
     	
 # main
 threads = [] 
-threadsstatus = 0 * [len(RealyMap.relaymap)]
+threadsstatus = [0] * len(RelayMap.relaymap)
 events = TimerCalander.TimerCalander()
 if(os.path.exists(Config.TimerCalendarLocalPath)): # read calander events json
+    print('reading calendar file...')
     LastCalmodtime  = os.stat(Config.TimerCalendarLocalPath).st_mtime # marm file mod time
     events.load(filename=Config.TimerCalendarLocalPath)# load data
+    print(events.len())
+    print(len(threadsstatus))
+
 manualvents = TimerCalander.TimerCalander()
 #start threads at first
 for i in range(2,len(threadsstatus)):
     if Switch.GetNextEvent(events,True,i) is not None: # if calander include events for this switch -> start thread to process it
        	print ('starting thread ' + str (i))
-        tr  = threading.Thread(target = runrealymonitor, args = [threadsstatus,str(i)])
+        tr  = threading.Thread(target = runrealymonitor, args = [threadsstatus,i])
         tr.start()
        	threads.append(tr)
-       	threadsstatus[i] = tr.native_id    
+       	threadsstatus[i] = i    
     elif(os.path.exists(str(i)+Config.TimerManualLocalPath)):# manual calander created start thred to process it
         print ('starting thread for maual event ' + str (i))
-        tr  = threading.Thread(target = runrealymonitor, args = [threadsstatus,str(i)])
+        tr  = threading.Thread(target = runrealymonitor, args = [threadsstatus,i])
         tr.start()
         threads.append(tr)
-        threadsstatus[i] = tr.native_id
+        threadsstatus[i] = i
 #monitor for new switches or restart exited threads 
 modtime = None   
 while(True):
@@ -231,19 +237,20 @@ while(True):
 		# corner case
 		if threadsstatus[i] < 0: # thread exit unexpectdly start it again
 			print ('restarting thread ' + str (i))
-			tr  = threading.Thread(target = runrealymonitor, args = [threadsstatus,str(i)])
+			tr  = threading.Thread(target = runrealymonitor, args = [threadsstatus,i])
 			tr.start()
 			threads.append(tr)
-			threadsstatus[i] = tr.native_id    
+			threadsstatus[i] = i    
 		if threadsstatus[i] > 0: # active thread -> continue
 			continue 
+		#handle cases when no active thread for this switch
 		if(os.path.exists(str(i)+Config.TimerManualLocalPath)): 
 			# manual calander created start thred to process it
 			print ('starting thread for maual event ' + str (i))
-			tr  = threading.Thread(target = runrealymonitor, args = [threadsstatus,str(i)])
+			tr  = threading.Thread(target = runrealymonitor, args = [threadsstatus,i])
 			tr.start()
 			threads.append(tr)
-			threadsstatus[i] = tr.native_id
+			threadsstatus[i] = i
 		if(os.path.exists(Config.TimerCalendarLocalPath)): # look for new calander events if file was modified since last time
 			modtime  = os.stat(Config.TimerCalendarLocalPath).st_mtime
 			if LastCalmodtime != modtime:
@@ -251,17 +258,20 @@ while(True):
 				print ("calendar file was changed, reading the updated Json")
 				if Switch.GetNextEvent(events,True,i) is not None: #event exist for this swithc atart thread to process
        				   print ('starting thread ' + str (i))
-        			   tr  = threading.Thread(target = runrealymonitor, args = [threadsstatus,str(i)])
+        			   tr  = threading.Thread(target = runrealymonitor, args = [threadsstatus,i])
         			   tr.start()
        				   threads.append(tr)
-       				   threadsstatus[i] = tr.native_id  
+       				   threadsstatus[i] = i  
 	LastCalmodtime = modtime
 	# thread list cleanup
 	for x in range(len(threads)):
-		if threads[x] is None | threads[x] =='':
+		if x >= len(threads): # can happened due to thread pop
+			break
+		if threads[x] is None or threads[x] =='':
 			continue
 		if threads[x].is_alive() == False:
 			threads.pop(x)
+			print('thread was poped')
 			x= x-1
 
 print ("exit Timer Monitor!!!")
