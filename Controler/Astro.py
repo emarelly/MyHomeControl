@@ -65,6 +65,7 @@ def GetAstro(astrotype,date,observer,offset = 0):
         val = s['noon'] + (datetime.datetime.now() - datetime.datetime.utcnow())
     else:
         return None
+		
     return val + datetime.timedelta(minutes=offset)
     
   
