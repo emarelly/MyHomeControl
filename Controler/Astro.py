@@ -39,7 +39,7 @@ class addres:
         return self.location
     def Observer(self):
         if self.locationInfo is None:
-           self.locationInfo = LocationInfo(self.location.latitude, self.location.longitude)
+           self.locationInfo = LocationInfo(latitude = self.location.latitude, longitude = self.location.longitude)
         return self.locationInfo.observer
 ### utility functions #####
 def GetAstro(astrotype,date,observer,offset = 0):
@@ -65,10 +65,8 @@ def GetAstro(astrotype,date,observer,offset = 0):
         val = s['noon'] + (datetime.datetime.now() - datetime.datetime.utcnow())
     else:
         return None
-    if (offset < 0):
-        return val- datetime.timedelta(minutes=offset)
-    else:
-        return val + datetime.timedelta(minutes=offset)
+    return val + datetime.timedelta(minutes=offset)
+    
   
 ###### example  #########
 ##addr = addres(streat = 'hazamir',country='israel',city='ramat gan',timezone='jerusalem')
