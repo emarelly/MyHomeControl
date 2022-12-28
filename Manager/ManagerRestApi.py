@@ -80,6 +80,7 @@ class BoilerRestHTTPRequestHandler(BaseHTTPRequestHandler):
     def __init__(self, status, *args):
         #print ('BoilerRestHTTPRequestHandler called')
         self.status = status
+        print('Http Server Started')
         BaseHTTPRequestHandler.__init__(self, *args)
        
     def do_GET(self):
@@ -148,3 +149,4 @@ class BoilerRestHTTPRequestHandler(BaseHTTPRequestHandler):
 def runserver(status):
     httpd = http_server('0.0.0.0', 8000, status)
     httpd.serve_forever()
+    print('http server terminated ....')
