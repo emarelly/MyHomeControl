@@ -127,7 +127,11 @@ class ReadGmailCalendar(object):
                         else:
                             endtime = datetime.datetime( date.year,date.month, date.day, ev['end'][0].hour,ev['end'][0].minute,ev['end'][0].second,tzinfo=datetime.timezone(offset=datetime.timedelta()))
                     if endtime is None:
-                        endtime = date + datetime.timedelta(seconds = int(ev['duration']))
+                        endtime = sttime + datetime.timedelta(seconds = int(ev['duration']))
+                        if endtime.weekday() == 6 :
+                            day = 1
+                        else:
+                            day = endtime.weekday() + 2
                     time = '{:02d}'.format(endtime.hour) + ":" + '{:02d}'.format(endtime.minute) + ":" + '{:02d}'.format(endtime.second) 
                     if endtime < sttime: #if end is before start add 1 day
                         day +=1
