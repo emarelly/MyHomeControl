@@ -9,14 +9,19 @@
 		 <title>Current temp</title>
 	  <style>
 		.gauge {
-			width: 450px;
-			height: 450px;
+			width: 250px;
+			height: 150px;
 			display: inline-block;
-		  }
+            font-size:large;
+            padding: 0px 0px;
+            margin-top: 0px
+    	  }
           .smallgauge {
 			width: 100px;
 			height: 100px;
 			display: inline-block;
+            padding: 0px 0px;
+            margin-top: -30px
 		  }
           .button {
             background-color: #4CAF50; /* Green */
@@ -36,18 +41,22 @@
           .button3 {background-color: #f44336;} /* Red */ 
           .button4 {background-color: #e7e7e7; color: black;} /* Gray */ 
           .button5 {background-color: #555555;} /* Black */
+          
 		</style> 
     </head>
    <body onload="displaydata()">
-	
-	<div id="Showers-gauge" class=gauge>
-	<div id="temp-up-gauge" class=smallgauge></div>
-    <div id="temp-mid-gauge" class=smallgauge></div>
-    <div id="temp-low-gauge" class=smallgauge></div> </div>
-    <p id="heaterstatus"></p>
-    <p id="Mode"></p>
-    <button class="button" id="onoffBtn" onclick="onoff()">...</button>
-    <button class="button" id="autoBtn" onclick="Auto()">Auto</button>
+	<Section>
+        <div id="Showers-gauge" class=gauge></div>
+        <article>
+        <p id="temp-up-gauge" class=smallgauge></p>
+        <p id="temp-mid-gauge" class=smallgauge></p>
+        <p id="temp-low-gauge" class=smallgauge></p> 
+    </article>
+        <h3 id="heaterstatus" style="margin-top: -7px"></h3>
+        <h3 id="Mode" style="margin-top: -7px"></h3>
+        <button class="button" id="onoffBtn" onclick="onoff()">...</button>
+        <button class="button" id="autoBtn" onclick="Auto()">Auto</button>
+    </Section>
 	<script>
 		setInterval(displaydata, 10000);
         let TempVal = 2
@@ -55,15 +64,18 @@
                     url = document.location.origin + "/status"
 					const obj = JSON.parse(Get(url));
                     TempVal = obj.CurrentShowers 
-					document.getElementById("heaterstatus").innerHTML = "Heater is:"+  obj.HeaterOnOff
+					//document.getElementById("heaterstatus").innerHTML = "Heater is:"+  obj.HeaterOnOff
                     document.getElementById("Mode").innerHTML = "Mode is " + obj.Status
                     if (obj.HeaterOnOff == "Off"){
                         document.getElementById("onoffBtn").innerHTML ="On"
                         document.getElementById("onoffBtn").className = "button button2"
+                        document.getElementById("heaterstatus").innerHTML = "Heater is: &#128721; ("  + obj.HeaterOnOff +")"
+
                     }
                     else{
                         document.getElementById("onoffBtn").innerHTML ="Off"
                         document.getElementById("onoffBtn").className = "button button3"
+                        document.getElementById("heaterstatus").innerHTML = "Heater is: &#128293; ("  + obj.HeaterOnOff +")"
                     }
 					gs.refresh(obj.CurrentShowers)
                     gu.refresh(obj.CurrentTemp[2])
@@ -128,8 +140,19 @@
             decimals: true,
 			min: 0,
 			max: 70,
+            pointer: true,
+            pointerOptions: {
+                toplength: -5,
+                bottomlength: 15,
+                bottomwidth: 10,
+                color: '#8e8e93',
+                stroke: '#ffffff',
+                stroke_width: 3,
+                stroke_linecap: 'round'
+              },
+            gaugeWidthScale: 0.3,
 			title: "UperTemp",
-			label: "Uper °C",
+            label: "Uper °C",
 			levelColors: ["#FFFF00", "#FF8C00", "#ff0000"],
 	    });
         var gm = new JustGage({
@@ -138,7 +161,19 @@
             decimals: true,
             min: 0,
             max: 70,
-            title: "MidTemp",
+            pointer: true,
+            pointerOptions: {
+                toplength: -5,
+                bottomlength: 15,
+                bottomwidth: 10,
+                color: '#8e8e93',
+                stroke: '#ffffff',
+                stroke_width: 3,
+                stroke_linecap: 'round'
+              },
+            gaugeWidthScale: 0.3,
+            counter: true,
+                title: "MidTemp",
             label: "Mid °C",
             levelColors: ["#FFFF00", "#FF8C00", "#ff0000"],
         });
@@ -148,6 +183,17 @@
             decimals: true,
             min: 0,
             max: 70,
+            pointer: true,
+            pointerOptions: {
+                toplength: -5,
+                bottomlength: 15,
+                bottomwidth: 10,
+                color: '#8e8e93',
+                stroke: '#ffffff',
+                stroke_width: 3,
+                stroke_linecap: 'round'
+              },
+            gaugeWidthScale: 0.3,
             title: "LowerTemp",
             label: "Low °C",
             levelColors: ["#FFFF00", "#FF8C00", "#ff0000"],
@@ -158,7 +204,8 @@
         decimals: true,
         min: 0,
         max: 6,
-        title: "מספר מקלחות",
+        pointer: true,
+        title: "showers",
         label: "Showers",
         levelColors: ["#FFFF00", "#FF8C00", "#ff0000"],
   });

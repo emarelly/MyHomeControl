@@ -92,6 +92,11 @@ class BoilerRestHTTPRequestHandler(BaseHTTPRequestHandler):
             query_components = None
         if folder == 'status':
             out  = self.status.toJSON()
+        elif folder == 'nicestatus':
+            #out = '<!DOCTYPE html> \n <html> \n <body> \n  <h1>Heading 1</h1> \n <h2>Heading 2</h2> \n <h3>Heading 3</h3> \n <h4>Heading 4</h4> \n</body>\n </html>'
+            f= open('nice.html')
+            out  = f.read()
+            f.close()
         elif folder == 'log': 
             out = 'log file is: \r\n' + tail('BoilerManager.log',150)
         elif folder == 'relay': 
@@ -122,6 +127,9 @@ class BoilerRestHTTPRequestHandler(BaseHTTPRequestHandler):
                 myfile.writelines(lines[3])
         elif folder == 'manualon':
             genmanualcal(hours=3, temp=4)
+        elif folder == 'auto':
+            if os.path.exists(Config.ManualLocalPath): 
+                os.remove(Config.ManualLocalPath)
         elif folder == 'manualoff': 
             genmanualcal(hours=1, temp=0)
         elif folder == 'updaterelaycalander':

@@ -120,6 +120,7 @@ class Boiler:
 			Minheatperiod = False
 			CureItem = None
 			time2heat = None
+			manualitem = None
 			while (mQuit == 1):
 				BoilerStatus = controlrelay.ReadRelay(Config.ControlRelayNum)
 				print(BoilerStatus)
@@ -132,18 +133,24 @@ class Boiler:
 						manualvent = BoilerCalander.BoilerCalander()
 						manualvent.load(filename=Config.ManualLocalPath)
 						Lastmanualmodtime  = os.stat(Config.ManualLocalPath).st_mtime
-					else:
-						manualvent = None
+					manualitem = Boiler.GetNextEvent(manualvent)	
+				else:
+					manualitem = None
 				jsonmodtime  = os.stat(Config.CalendarLocalPath).st_mtime
 				if LastCalmodtime != jsonmodtime:
 					calevents.load(filename=Config.CalendarLocalPath)
 					print (strTime4Log + "calendar file was changed, reading the updated Json")
 					LastCalmodtime =  jsonmodtime
 					print (strTime4Log + "last modified: %s" % time.ctime(jsonmodtime))
-				manualitem = Boiler.GetNextEvent(manualvent)
-				if manualitem == None and os.path.exists(Config.ManualLocalPath): # if manual command time finished remove the file
+				
+				if manualitem is None and os.path.exists(Config.ManualLocalPath): # if manual command time finished remove the file
 					os.remove(Config.ManualLocalPath)
 					Lastmanualmodtime = None
+					manualvent = None
+				if manualitem is not None:
+					self.status.Status = 'Manual'
+				else:
+					self.status.Status = 'Auto'
 				CureItem = manualitem or Boiler.GetNextEvent(calevents)
 				if CureItem == None:
 					print(strTime4Log + ' No Event To read' )
@@ -153,7 +160,6 @@ class Boiler:
 				self.GetCurrentTemp()
 				self.status.CurrentShowers = self.CurretnShowers
 				self.status.CurrentTemp = self.CurrentTemp
-				self.status.Status = 'on'
 				print ('current temp= ' + str(self.CurretnShowers) + ' MinTemp = ' +  str(CureItem['mintemp']) +  ' TargetTrmp = ' + str(CureItem['targettemp']))
 				if  self.CurretnShowers == -1 :
 					self.status.ActiveYesNo = 'No'
@@ -168,12 +174,14 @@ class Boiler:
 							if BoilerStatus == 0:
 								print (strTime4Log +"Current temp (" + str(self.CurretnShowers) + ") is less than minimum (" + str(CureItem['mintemp']) + ") - turning the boiler on" )
 								Boiler.SetRelay(Config.ControlRelayNum,1)
+								BoilerStatus = 1
 							else:
 								print(strTime4Log +"Current temp (" + str(self.CurretnShowers) + ") is less than minimum (" + str(CureItem['mintemp']) + ") - but boiler is already on" )
 						elif self.CurretnShowers >= (CureItem['targettemp'] + Config.ThresholdFactor) and self.CurretnShowers >= (CureItem['mintemp'] + Config.ThresholdFactor):   # turn off if reached target value
 							if BoilerStatus == 1:
 								print (strTime4Log +"Current temp (" + str(self.CurretnShowers) + ") reached target temp (" + str(CureItem['targettemp']) + ") turning the boiler off" )
 								Boiler.SetRelay(Config.ControlRelayNum,0)
+								BoilerStatus = 0
 								Minheatperiod = False
 							else:
 								Minheatperiod = False
@@ -188,15 +196,18 @@ class Boiler:
 							if time2start <= 0 and time2heat > 0: 
 								if BoilerStatus == 0 :
 									Boiler.SetRelay(Config.ControlRelayNum,1)
+									BoilerStatus = 1
 									Minheatperiod = True  # avoid on/off cycles during heating to target temp
 									print (strTime4Log +"turning the boiler on to reach target temperature (current = " + str(self.CurretnShowers) + " target = " + str(CureItem['targettemp']))
 								elif self.CurretnShowers >= (CureItem['mintemp'] + Config.ThresholdFactor):
 									if BoilerStatus == 1 :
 										Boiler.SetRelay(Config.ControlRelayNum,0)
+										BoilerStatus = 0
 									print (strTime4Log +"Current temp reached Min temp turning the boiler off" ) 
 						else:
 							if BoilerStatus == 0 :
 								Boiler.SetRelay(Config.ControlRelayNum,1)
+								BoilerStatus = 1        
 							time2heat = int(float(CureItem['targettemp']  - self.CurretnShowers) / (Config.HeatRate))
 							print (strTime4Log + "time to heat (while heating) " + str(time2heat) + "[Min]")
 						#Update status class

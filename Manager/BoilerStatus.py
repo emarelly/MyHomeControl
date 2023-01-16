@@ -5,7 +5,7 @@ import json
 class BoilerStatus:
     def __init__(self):
         self._mStatus = 'off'
-        self._mHeaterOnOff = 'No' 
+        self._mHeaterOnOff = 'off' 
         self._mDate = datetime.datetime.now()
         self._mMinVal = 0.0
         self._mTargetVal = 0.0 
