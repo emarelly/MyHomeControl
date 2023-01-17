@@ -14,6 +14,29 @@ import TimerCalander
 import controlrelay
 import Config
 # utils functions
+# read history file and get it in JS rows format
+
+def gethistoricaldata(filename):
+    rows =''
+    if os.path.isfile(filename):
+        fp = open(filename,'r')
+        history = fp.readlines()
+        fp.close()
+        # file is a 1 min list and we want 10 min sample for lst 24 hours so 144 samples out of 1440 lines
+        startpoint = len(history) - 1440
+        if startpoint < 0:
+            startpoint = 0
+        for i in range(startpoint,len(history),10):
+            try:
+                line = json.loads(history[i].replace(';',''))
+                temp= float(int(line['Capacity'][0]))/10
+                dateparts = line["date"].split(':')
+                dateparts[0] = dateparts[0].split('/')
+                item = '['+ dateparts[0][0]+','+dateparts[0][1]+','+dateparts[0][2].strip()+','+dateparts[1].strip()+','+dateparts[2]+','+dateparts[3]+',' +str(temp)+'],'
+                rows = rows + item
+            except:
+                print('ignoring line ' + history[i])
+    return (rows + ']').replace('],]',']')
 # file head implmentatioin 
 def head(filename,NOFlines=150): 
     if os.path.isfile(filename):
@@ -92,6 +115,8 @@ class BoilerRestHTTPRequestHandler(BaseHTTPRequestHandler):
             query_components = None
         if folder == 'status':
             out  = self.status.toJSON()
+        elif folder == 'history':
+            out  = gethistoricaldata("temp.txt")
         elif folder == 'nicestatus':
             #out = '<!DOCTYPE html> \n <html> \n <body> \n  <h1>Heading 1</h1> \n <h2>Heading 2</h2> \n <h3>Heading 3</h3> \n <h4>Heading 4</h4> \n</body>\n </html>'
             f= open('nice.html')
