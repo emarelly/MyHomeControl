@@ -239,16 +239,18 @@
     var lastate = todate(rows[rows.length -1])
     data.addColumn('date', 'Time of Day');
     data.addColumn('number', 'Showers');
+    data.addColumn('number', 'Min Showers');
+    data.addColumn('number', 'Target Showers');
     rows.forEach(myFunction);
     function myFunction(value, index, array) {
         x = value.split(",")
-        data.addRow([new Date(x[0],x[1],x[2],x[3],x[4],x[5]),parseFloat(x[6])]);
+        data.addRow([new Date(x[0],x[1],x[2],x[3],x[4],x[5]),parseFloat(x[6]),parseFloat(x[7]),parseFloat(x[8])]);
     }
     var options = {
         width: 900,
         height: 500,
         title: 'Available showers in the last 24 hours',
-        legend: {position: 'none'},
+        legend: {position: 'bottom'},
         enableInteractivity: false,
         chartArea: {
           width: '75%'

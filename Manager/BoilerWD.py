@@ -62,14 +62,22 @@ def ReStartApp():
 	except:
 		print ("Exec error: "+  traceback.format_exc())
 
-
+def checkhttp(url):
+  try:
+    if requests.get(url).status_code == 200:
+      return True
+    else:
+      return False 
+  except:
+    return  False
+   
 # main
 print ("*******" + str(datetime.datetime.now()) + "************")
 print ("BoilerWd.py ....")
 print ("verifying processes...")
 process = CheckProcess()
 print (str(process) )
-if(process[0] != MANAGER_FLAG + TIMER_FLAG or requests.get('http://127.0.0.1:8000/status').status_code != 200):
+if(process[0] != MANAGER_FLAG + TIMER_FLAG or checkhttp('http://127.0.0.1:8000/status') == False):
     print ("not all process are running  - restarting Apps")
     ReStartApp()
 else:

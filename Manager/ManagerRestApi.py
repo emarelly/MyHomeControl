@@ -23,16 +23,20 @@ def gethistoricaldata(filename):
         history = fp.readlines()
         fp.close()
         # file is a 1 min list and we want 10 min sample for lst 24 hours so 144 samples out of 1440 lines
-        startpoint = len(history) - 1440
+        startpoint = len(history) - 1441
         if startpoint < 0:
             startpoint = 0
         for i in range(startpoint,len(history),10):
             try:
-                line = json.loads(history[i].replace(';',''))
+                line = json.loads(history[i].replace(';','').replace('\'',''))
                 temp= float(int(line['Capacity'][0]))/10
+                if history[i].find('target') >=0:
+                    target = line["target"]
+                else:
+                    target = [2.2,3.3]
                 dateparts = line["date"].split(':')
                 dateparts[0] = dateparts[0].split('/')
-                item = '['+ dateparts[0][0]+','+dateparts[0][1]+','+dateparts[0][2].strip()+','+dateparts[1].strip()+','+dateparts[2]+','+dateparts[3]+',' +str(temp)+'],'
+                item = '['+ dateparts[0][0]+','+dateparts[0][1]+','+dateparts[0][2].strip()+','+dateparts[1].strip()+','+dateparts[2]+','+dateparts[3]+',' +str(temp)+',' +str(target[0])+',' +str(target[1])+'],'
                 rows = rows + item
             except:
                 print('ignoring line ' + history[i])

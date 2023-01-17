@@ -120,12 +120,12 @@ class Temp(object):
      self.filename =args[1]
      if len(args) > 2:
        self.url = args[2]
-  def ReadTemp(self,):
+  def ReadTemp(self,mintemp,targettemp):
      if len(self.url) > 0:
-        self.ReadTempFromESP()
+        self.ReadTempFromESP(mintemp,targettemp)
      else:
         self.ReadTempFrom1Wire
-  def ReadTempFromESP(self,):
+  def ReadTempFromESP(self,mintemp,targettemp):
   # Open the file that we viewed earlier so that python can see what is in it. Replace the serial number as before. 
     if len(self.filename) > 0 :
       f = open(self.filename,'a')
@@ -141,9 +141,10 @@ class Temp(object):
                f.flush()
                list=GetSensorsFromESP(self.url,['43692b06','45052b06','2f832a06']) 
             calc = calcShowers(list)
+            target = [float(mintemp),float(targettemp)]
             if len(self.filename) > 0 :
                self.resetcount = 0
-               f.write("{\"date\":\"" + time.strftime("%Y/%m/%d : %H:%M:%S" ) + "\",\"Temp\":" + str(list) + ',\"Capacity\":' + str(calc) + '};\r\n')
+               f.write("{\"date\":\"" + time.strftime("%Y/%m/%d : %H:%M:%S" ) + "\",\"Temp\":" + str(list) + ',\"Capacity\":' + str(calc) + ',\"target\":' + str(target)+ '};\r\n')
                f.flush()
                fcur.write("{\"Date\":\"" + time.strftime("%Y/%m/%d %H:%M:%S" ) + "\",\"Temp\":" + str(list) + ',\"Capacity\":' + str(calc) + '\"}')
                fcur.close()

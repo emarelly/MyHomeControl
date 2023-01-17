@@ -156,7 +156,7 @@ class Boiler:
 					print(strTime4Log + ' No Event To read' )
 					time.sleep(Config.SampleRateInSec)
 					continue
-				MYTermo.ReadTemp() # read  temp from ESP module via rest api
+				MYTermo.ReadTemp(str(CureItem['mintemp']),str(CureItem['targettemp'])) # read  temp from ESP module via rest api
 				self.GetCurrentTemp()
 				self.status.CurrentShowers = self.CurretnShowers
 				self.status.CurrentTemp = self.CurrentTemp
