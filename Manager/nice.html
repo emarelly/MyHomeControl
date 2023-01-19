@@ -238,13 +238,14 @@
     var firstdate = todate(rows[0])
     var lastate = todate(rows[rows.length -1])
     data.addColumn('date', 'Time of Day');
-    data.addColumn('number', 'Showers');
+    data.addColumn('number', 'Available Showers');
     data.addColumn('number', 'Min Showers');
     data.addColumn('number', 'Target Showers');
+    data.addColumn('number', 'Heater Status');
     rows.forEach(myFunction);
     function myFunction(value, index, array) {
         x = value.split(",")
-        data.addRow([new Date(x[0],x[1],x[2],x[3],x[4],x[5]),parseFloat(x[6]),parseFloat(x[7]),parseFloat(x[8])]);
+        data.addRow([new Date(x[0],x[1],x[2],x[3],x[4],x[5]),parseFloat(x[6]),parseFloat(x[7]),parseFloat(x[8]),parseFloat(x[9])]);
     }
     var options = {
         width: 900,
