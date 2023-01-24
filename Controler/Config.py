@@ -12,6 +12,7 @@ RefreshTime = 30
 USER = 'pi'
 PASS = 'kerenm1'
 StatusFileName = 'temp.txt.current'
+OK_STATUS = ['ok','auto']
 MaxFailures = 5
 # rest API url
 baseRestURL = 'http://MARELLYPI3:8000/'

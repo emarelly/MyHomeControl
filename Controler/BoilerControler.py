@@ -248,7 +248,7 @@ def main():
                      keepaliveCount = keepaliveCount +1
                      print('monitor status test at '+ datetime.datetime.now().isoformat())
                      Pistatus = json.loads(Get(Config.GetStatusURL))
-                     if Pistatus['Status'].lower() != 'on':
+                     if Pistatus['Status'].lower() in Config.OK_STATUS:
                                 keepaliveCount = 0
                                 count= count + 1
                                 # if pi is down send email alert to admin
@@ -261,7 +261,7 @@ def main():
                            
                      else:
                        keepaliveCount = 0
-               if(Pistatus['Status'].lower() == 'on'):
+               if(Pistatus['Status'].lower() in Config.OK_STATUS):
                             count = 0
                             # Process email requests
                             process.Processemail(mailclient = Mailclient)
