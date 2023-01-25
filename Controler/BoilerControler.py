@@ -31,7 +31,7 @@ def Get(url):
         x = requests.get(url)
         return x.text
     except:
-        return '{"Status": "fail to connect to Manager"}'
+        return '{"Status": "fail to connect to Manager", "ActiveYesNo": "No"}'
     
 def Post(url,filename=None,json=None):
     try:
@@ -75,9 +75,18 @@ class ProcessControler(object):
             # etep 1 read incoming email (and delete after process)
            Msgs = mailclient.ReadMessages(delete=True)
            currentStatus = json.loads(Get(Config.GetStatusURL))
+           connectionproblem = currentStatus['ActiveYesNo'].lower() == 'no' and currentStatus['Status'].lower() == 'fail to connect to manager'
            for msg in Msgs:
-               #verify that the emial is from authorized email adress 
+              
                 print('message received: ' + msg.subject)
+                if connectionproblem == True:
+                 #verify that the emial is from authorized email adress and send status message do nothing else
+                    if (self.ValidateEmail(FromEmail =msg.Mailfrom, AuthorizedEmailList=Config.UserEmailList) ==True):
+                        Body = "Hello, \r\nThe manager service is not comunicating, error: " + str(currentStatus) + "\r\n"
+                        mailclient.SendMessage(MailSubect = "Bolier Service status error", MailBody = Body, MailTo = msg.Mailfrom)
+                        print('no connection to manager sending back status message...')
+                    continue
+                 #verify that the emial is from authorized email adress 
                 if (self.ValidateEmail(FromEmail =msg.Mailfrom, AuthorizedEmailList=Config.UserEmailList) ==True):
                     # mail tryp switch
                     #Boiler email optios
@@ -88,7 +97,7 @@ class ProcessControler(object):
                                 Body = 'Hello, \r\nThe boiler current status is: \r\n' + str(currentStatus) + "\r\n"
                                 mailclient.SendMessage(MailSubect = "Bolier Service status", MailBody = Body, MailTo = msg.Mailfrom)
                         else:
-                                Body = "Hello, \r\nThe boiler service is not active error " + str(currentStatus) + "\r\n"
+                                Body = "Hello, \r\nThe boiler service is not active, error: " + str(currentStatus) + "\r\n"
                                 mailclient.SendMessage(MailSubect = "Bolier Service status error", MailBody = Body, MailTo = msg.Mailfrom)
                     elif (msg.subject.lower().find("log") >=0):  # process mail for log request
                         resault = Get(Config.GetLogURL)
@@ -192,12 +201,16 @@ class ProcessControler(object):
         except:
             print("processmail: " + traceback.format_exc())
     def ProcessCalendar(self,calclient, mailclient):
+        currentStatus = json.loads(Get(Config.GetStatusURL)) # do nothing is boiler is not active and cant connect to it 
+        if currentStatus['ActiveYesNo'].lower() == 'no' and currentStatus['Status'].lower() == 'fail to connect to manager':
+              print ('ProcessCalendar: ignoring because the server is not responding ....')
+              return
         #boiler Calendar
         currentcal = calclient.ReadCalendar()
         currentBoilercal = currentcal[0]
         print ('ProcessCalendar: processing Boiler Calendar')
         if(calclient.status == False):
-            mailclient.SendMessage(MailSubect ="Fail to read Calander",  MailBody = "Hello,\r\nFail to read boiler calander fro gmail", MailTo = Config.AdminEmailList)
+            mailclient.SendMessage(MailSubect ="Fail to read Calander",  MailBody = "Hello,\r\nFail to read boiler calander from gmail", MailTo = Config.AdminEmailList)
             skip=True
         skip=False
         if (self.prevcal.len() == 0 and currentBoilercal.len() > 0):
@@ -241,36 +254,27 @@ def main():
         Pistatus = json.loads(status)
         keepaliveCount = 0
         KeepAlivefactor = 3600/ Config.RefreshTime # keep alive every hour on when need to change status
+        lastmessagesent = ''
         while (True):
            try:
                #Validate pi status
-               if keepaliveCount > KeepAlivefactor:
-                     keepaliveCount = keepaliveCount +1
-                     print('monitor status test at '+ datetime.datetime.now().isoformat())
-                     Pistatus = json.loads(Get(Config.GetStatusURL))
-                     if Pistatus['Status'].lower() in Config.OK_STATUS:
-                                keepaliveCount = 0
-                                count= count + 1
-                                # if pi is down send email alert to admin
-                                if (count > 3):
-                                    Mailclient.SendMessage(MailSubect = "PI is not working", MailBody= "Hello, \r\n the pi is curently not working please look into it. reported error is: " + str(Pistatus),MailTo = Config.AdminEmailList)
-                                    count = 0
-                                    keepaliveCount = 0
-                                else:
-                                   print("fail to monitor:" + str(count) + " times ")
-                           
-                     else:
-                       keepaliveCount = 0
-               if(Pistatus['Status'].lower() in Config.OK_STATUS):
-                            count = 0
-                            # Process email requests
-                            process.Processemail(mailclient = Mailclient)
-                            # Process Calendar events
-                            process.ProcessCalendar(calclient = CalClient, mailclient = Mailclient)
-               else:
-                           Pistatus = json.loads(Get(Config.GetStatusURL))
-                           if (Pistatus['Status'].lower() == 'on'):
-                                Mailclient.SendMessage(MailSubect = "Connection to PI restored",MailBody= "Hello, \r\n The connection to pi was restored.",MailTo = Config.AdminEmailList)
+               #print("start loop ...." + str(Pistatus))
+               Pistatus = json.loads(Get(Config.GetStatusURL))
+               print(Pistatus)
+               #print('monitor status test at '+ datetime.datetime.now().isoformat())
+               isactive = Pistatus['ActiveYesNo'].lower() == 'yes'
+               if isactive == False and  lastmessagesent != 'down':
+                    # if pi is down send email alert to admin
+                    lastmessagesent = 'down'
+                    Mailclient.SendMessage(MailSubect = "manager is not working", MailBody= "Hello, \r\n the manager is curently not working please look into it. reported error is: " + str(Pistatus),MailTo = Config.AdminEmailList)
+               elif(isactive == True and lastmessagesent != 'up'):
+                    lastmessagesent = 'up'
+                    Mailclient.SendMessage(MailSubect = "Connection to manager restored",MailBody= "Hello, \r\n The connection to manager was restored.",MailTo = Config.AdminEmailList)
+
+                # proccess boiler events
+               process.Processemail(mailclient = Mailclient)
+                # Process Calendar events
+               process.ProcessCalendar(calclient = CalClient, mailclient = Mailclient)
                 
            except  :
                print("main loop Exception error: " + traceback.format_exc())

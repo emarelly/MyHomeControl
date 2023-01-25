@@ -11,7 +11,8 @@ class BoilerStatus:
         self._mTargetVal = 0.0 
         self._mTimeToStartMin = 0 
         self._mCurrentTemp = [-1,-1,-1] 
-        self._mCurrentShowers = 0.0   
+        self._mCurrentShowers = 0.0 
+        self._mActiveYesNo = 'no'  
     def customDict(self):
         dup = self.__dict__.copy()
         # configure dup to contain fields that you want to send
@@ -36,6 +37,8 @@ class BoilerStatus:
          	return self._mCurrentTemp  
     def get_CurrentShowers(self):
          	return self._mCurrentShowers  
+    def get_ActiveYesNo(self):
+         	return self._mActiveYesNo  
      
     def set_Status(self,a):
          	self._mStatus = a
@@ -53,6 +56,8 @@ class BoilerStatus:
          	self._mCurrentTemp = a
     def set_CurrentShowers(self,a):
          	self._mCurrentShowers = a
+    def set_ActiveYesNo(self,a):
+         	self._mActiveYesNo = a
      
     
     Status = property(get_Status, set_Status) 
@@ -63,3 +68,4 @@ class BoilerStatus:
     TimeToStartMin = property(get_TimeToStartMin, set_TimeToStartMin) 
     CurrentTemp = property(get_CurrentTemp, set_CurrentTemp) 
     CurrentShowers = property(get_CurrentShowers, set_CurrentShowers) 
+    ActiveYesNo = property(get_ActiveYesNo, set_ActiveYesNo) 

@@ -117,7 +117,7 @@ class Boiler:
 				Lastmanualmodtime = None
 			# read temp from ESP module and save it (overcome bug in the ESP controler of mult thread access)
 			MYTermo = ReadBoilerTemp.Temp(60,Config.LogFileName,'http://ESPBoilerControler')
-			Minheatperiod = False
+			Heattotarget = False
 			CureItem = None
 			time2heat = None
 			manualitem = None
@@ -170,6 +170,7 @@ class Boiler:
 					self.status.TimeToStartMin = 0
 					print(strTime4Log + "Can't read temperature ")
 				else:
+						self.status.ActiveYesNo = 'Yes'
 						if self.CurretnShowers < CureItem['mintemp']: # if current temp les the min then turn on
 							if BoilerStatus == 0:
 								print (strTime4Log +"Current temp (" + str(self.CurretnShowers) + ") is less than minimum (" + str(CureItem['mintemp']) + ") - turning the boiler on" )
@@ -177,16 +178,16 @@ class Boiler:
 								BoilerStatus = 1
 							else:
 								print(strTime4Log +"Current temp (" + str(self.CurretnShowers) + ") is less than minimum (" + str(CureItem['mintemp']) + ") - but boiler is already on" )
-						elif self.CurretnShowers >= (CureItem['targettemp'] + Config.ThresholdFactor) and self.CurretnShowers >= (CureItem['mintemp'] + Config.ThresholdFactor):   # turn off if reached target value
+						elif (Heattotarget is True and self.CurretnShowers >= (CureItem['targettemp'] + Config.ThresholdFactor) and self.CurretnShowers >= (CureItem['mintemp'] + Config.ThresholdFactor)) or (Heattotarget is False and self.CurretnShowers >= (CureItem['mintemp'] + Config.ThresholdFactor)) :   # turn off if reached target value
 							if BoilerStatus == 1:
-								print (strTime4Log +"Current temp (" + str(self.CurretnShowers) + ") reached target temp (" + str(CureItem['targettemp']) + ") turning the boiler off" )
+								print (strTime4Log +"Current temp (" + str(self.CurretnShowers) + ") reached target or minimum temp (" + str(CureItem['targettemp']) + ") turning the boiler off" )
 								Boiler.SetRelay(Config.ControlRelayNum,0)
 								BoilerStatus = 0
-								Minheatperiod = False
+								Heattotarget = False
 							else:
-								Minheatperiod = False
-								print (strTime4Log +"Current temp (" + str(self.CurretnShowers) + ") reached target temp (" + str(CureItem['targettemp']) + ") boiler is already off" )
-						elif Minheatperiod == False  : # calculate if when to turn on to get to the target on time
+								Heattotarget = False
+								print (strTime4Log +"Current temp (" + str(self.CurretnShowers) + ") reached target or minimum temp (" + str(CureItem['targettemp']) + ") boiler is already off" )
+						elif Heattotarget == False  : # calculate if when to turn on to get to the target on time
 							time2heat = int(float(CureItem['targettemp']  - self.CurretnShowers) / (Config.HeatRate))
 							print (strTime4Log + "time to heat " + str(time2heat) + "[Min]")
 							time2start = CureItem['time2nextevent'] - time2heat
@@ -197,7 +198,7 @@ class Boiler:
 								if BoilerStatus == 0 :
 									Boiler.SetRelay(Config.ControlRelayNum,1)
 									BoilerStatus = 1
-									Minheatperiod = True  # avoid on/off cycles during heating to target temp
+									Heattotarget = True  # avoid on/off cycles during heating to target temp
 									print (strTime4Log +"turning the boiler on to reach target temperature (current = " + str(self.CurretnShowers) + " target = " + str(CureItem['targettemp']))
 								elif self.CurretnShowers >= (CureItem['mintemp'] + Config.ThresholdFactor):
 									if BoilerStatus == 1 :
