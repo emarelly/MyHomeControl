@@ -117,10 +117,12 @@ class Boiler:
 				Lastmanualmodtime = None
 			# read temp from ESP module and save it (overcome bug in the ESP controler of mult thread access)
 			MYTermo = ReadBoilerTemp.Temp(60,Config.LogFileName,'http://ESPBoilerControler')
-			Heattotarget = False
+			# initial values befor loop
 			CureItem = None
 			time2heat = None
 			manualitem = None
+			OffForTarget = True
+			OnForTarget = False
 			while (mQuit == 1):
 				BoilerStatus = controlrelay.ReadRelay(Config.ControlRelayNum)
 				print(BoilerStatus)
@@ -156,7 +158,8 @@ class Boiler:
 					print(strTime4Log + ' No Event To read' )
 					time.sleep(Config.SampleRateInSec)
 					continue
-				MYTermo.ReadTemp(CureItem['mintemp'],CureItem['targettemp'],BoilerStatus) # read  temp from ESP module via rest api
+				# read temp from sensors
+				MYTermo.ReadTemp(CureItem['mintemp'],CureItem['targettemp'],BoilerStatus) # read  temp from ESP module via rest api (parameters sent for audiig file in temp class)
 				self.GetCurrentTemp()
 				self.status.CurrentShowers = self.CurretnShowers
 				self.status.CurrentTemp = self.CurrentTemp
@@ -171,55 +174,66 @@ class Boiler:
 					print(strTime4Log + "Can't read temperature ")
 				else:
 						self.status.ActiveYesNo = 'Yes'
-						if self.CurretnShowers < CureItem['mintemp']: # if current temp les the min then turn on
-							if BoilerStatus == 0:
-								print (strTime4Log +"Current temp (" + str(self.CurretnShowers) + ") is less than minimum (" + str(CureItem['mintemp']) + ") - turning the boiler on" )
+						MinTempOn = CureItem['mintemp']
+						TargettempOn = CureItem['targettemp']
+						MinTempOff = MinTempOn + Config.ThresholdFactor
+						TargettempOff = TargettempOn + Config.ThresholdFactor
+						#on flag
+						time2heat = int(float(TargettempOn  - self.CurretnShowers) / (Config.HeatRate))
+						time2startInMin = CureItem['time2nextevent'] - time2heat
+						time2start = CurrentDate + datetime.timedelta(minutes=time2startInMin)
+						if time2startInMin <= 0 and time2heat > 0: 
+							OnForTarget = True #(e.g. turn on the heater)
+						else:
+							OnForTarget = False
+						#off flag
+						time2stopheat = int(float(TargettempOff  - self.CurretnShowers) / (Config.HeatRate))
+						time2stopInMin = CureItem['time2nextevent'] - time2stopheat
+						if time2stopInMin <= 0 and time2stopheat > 0: 
+							OffForTarget = False #(e.g. Do not turn off the heater)
+						else:
+							if OffForTarget is False and self.CurretnShowers >= TargettempOff: # to avoid on off durig heating (when actual heat rate is greater then configured) turn off heater when heating started only if reached target
+								OffForTarget = True
+
+						if BoilerStatus == 0: # heater is currently off
+							## must stay off
+							## should be turned on
+							if self.CurretnShowers < MinTempOn: # if current temp les the min then turn on
 								Boiler.SetRelay(Config.ControlRelayNum,1)
 								BoilerStatus = 1
-							else:
-								print(strTime4Log +"Current temp (" + str(self.CurretnShowers) + ") is less than minimum (" + str(CureItem['mintemp']) + ") - but boiler is already on" )
-						elif (Heattotarget is True and self.CurretnShowers >= (CureItem['targettemp'] + Config.ThresholdFactor) and self.CurretnShowers >= (CureItem['mintemp'] + Config.ThresholdFactor)) or (Heattotarget is False and self.CurretnShowers >= (CureItem['mintemp'] + Config.ThresholdFactor)) :   # turn off if reached target value
-							if BoilerStatus == 1:
-								print (strTime4Log +"Current temp (" + str(self.CurretnShowers) + ") reached target or minimum temp (" + str(CureItem['targettemp']) + ") turning the boiler off" )
-								Boiler.SetRelay(Config.ControlRelayNum,0)
-								BoilerStatus = 0
-								Heattotarget = False
-							else:
-								Heattotarget = False
-								print (strTime4Log +"Current temp (" + str(self.CurretnShowers) + ") reached target or minimum temp (" + str(CureItem['targettemp']) + ") boiler is already off" )
-						elif Heattotarget == False  : # calculate if when to turn on to get to the target on time
-							time2heat = int(float(CureItem['targettemp']  - self.CurretnShowers) / (Config.HeatRate))
-							print (strTime4Log + "time to heat " + str(time2heat) + "[Min]")
-							time2start = CureItem['time2nextevent'] - time2heat
-							if time2heat > 0 and BoilerStatus == 0:
-								dt = CurrentDate + datetime.timedelta(minutes=time2start)
-								print (strTime4Log + "Time To start Boiler (for now): " + dt.strftime('%Y-%m-%d %H:%M:%S %Z') )
-							if time2start <= 0 and time2heat > 0: 
-								if BoilerStatus == 0 :
+								print (strTime4Log +"Current temp (" + str(self.CurretnShowers) + ") is less than minimum (" + str(MinTempOn) + ") - turning the boiler on" )
+							elif OnForTarget is True: # need to be started to get to target on time
 									Boiler.SetRelay(Config.ControlRelayNum,1)
 									BoilerStatus = 1
-									Heattotarget = True  # avoid on/off cycles during heating to target temp
-									print (strTime4Log +"turning the boiler on to reach target temperature (current = " + str(self.CurretnShowers) + " target = " + str(CureItem['targettemp']))
-								elif self.CurretnShowers >= (CureItem['mintemp'] + Config.ThresholdFactor):
-									if BoilerStatus == 1 :
-										Boiler.SetRelay(Config.ControlRelayNum,0)
-										BoilerStatus = 0
-									print (strTime4Log +"Current temp reached Min temp turning the boiler off" ) 
-						else:
-							if BoilerStatus == 0 :
-								Boiler.SetRelay(Config.ControlRelayNum,1)
-								BoilerStatus = 1        
-							time2heat = int(float(CureItem['targettemp']  - self.CurretnShowers) / (Config.HeatRate))
-							print (strTime4Log + "time to heat (while heating) " + str(time2heat) + "[Min]")
+									print (strTime4Log +"turning the boiler on to reach target temperature (current = " + str(self.CurretnShowers) + " target = " + str(TargettempOn))								
+							# status
+							else: # print time to turn on status
+									print (strTime4Log + "heating time " + str(time2heat) + "[Min]")						
+									print (strTime4Log + "will start heatig @ " + str(time2start))						
+						else: # heater is currently on
+							## must stay on
+							if self.CurretnShowers < MinTempOff: # if current temp les the min then keep on
+								print(strTime4Log +"Current temp (" + str(self.CurretnShowers) + ") is less than minimum (" + str(MinTempOff) + ") - but boiler is already on" )
+							elif OffForTarget is False: # if current less then target keep on
+								print (strTime4Log + "time left for heating " + str(time2heat) + "[Min]")								
+							## should be off
+							else:
+								Boiler.SetRelay(Config.ControlRelayNum,0)
+								BoilerStatus = 0
+								if self.CurretnShowers >= MinTempOff : 
+									print (strTime4Log +"Current temp (" + str(self.CurretnShowers) + ") reached minimum temp (" + str(MinTempOff) + ") turning the boiler off" )
+								else:
+									print (strTime4Log +"Current temp (" + str(self.CurretnShowers) + ") reached target (" + str(TargettempOff) + ") turning the boiler off" )
+										
 						#Update status class
 						self.status.Date = CurrentDate
-						self.status.MinVal = float(CureItem['mintemp'])
+						self.status.MinVal = float(MinTempOn)
 						if BoilerStatus==0: 
-          					   self.status.HeaterOnOff ='Off'
+							self.status.HeaterOnOff ='Off'
 						else: 
-                  			           self.status.HeaterOnOff ='On'
-						self.status.TargetVal = float(CureItem['targettemp'])
-						self.status.TimeToStartMin = time2heat
+							self.status.HeaterOnOff ='On'
+						self.status.TargetVal = float(TargettempOn)
+						self.status.TimeToStartMin = time2startInMin
 						time.sleep(Config.SampleRateInSec)
 		except:
 			print("BoilerMonitor: " + traceback.format_exc())
