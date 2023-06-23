@@ -123,6 +123,7 @@ class Boiler:
 			manualitem = None
 			OffForTarget = True
 			OnForTarget = False
+			time2nextevent = None
 			while (mQuit == 1):
 				BoilerStatus = controlrelay.ReadRelay(Config.ControlRelayNum)
 				print(BoilerStatus)
@@ -174,6 +175,14 @@ class Boiler:
 					print(strTime4Log + "Can't read temperature ")
 				else:
 						self.status.ActiveYesNo = 'Yes'
+						if time2nextevent is not None and time2nextevent < CureItem['time2nextevent']: # if new event arived turn off heater and start calculation again
+						       	time2nextevent = CureItem['time2nextevent']
+						       	Boiler.SetRelay(Config.ControlRelayNum,0)
+						       	BoilerStatus = 0
+						       	print (strTime4Log +"new event arrived -> turn boiler off and recalculate " )
+						       	time.sleep(2)
+						       	continue	
+						time2nextevent = CureItem['time2nextevent']
 						MinTempOn = CureItem['mintemp']
 						TargettempOn = CureItem['targettemp']
 						MinTempOff = MinTempOn + Config.ThresholdFactor
