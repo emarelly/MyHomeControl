@@ -11,5 +11,5 @@ Blm = Boiler.Boiler(status)
 tr = threading.Thread(target=ManagerRestApi.runserver, args=(status,))
 tr.start()
 # start boiler monitor
-Blm.BoilerMonitor()
+Blm.BoilerMonitor(readonltmode = False)
 print ("exit Boiler Monitor!!!")

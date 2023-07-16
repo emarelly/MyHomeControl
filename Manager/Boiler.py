@@ -93,8 +93,9 @@ class Boiler:
                        event.dayOfWeek += 7
 		return BoilerCalander.BoilerCalander(events)
 
-	def BoilerMonitor(self):
+	def BoilerMonitor(self,readonltmode):
 		try:
+			print('boiler mode is : ' +str(readonltmode))
 			# load calander files #
 			calevents = BoilerCalander.BoilerCalander()
 			manualvent = BoilerCalander.BoilerCalander()
@@ -165,7 +166,18 @@ class Boiler:
 				self.status.CurrentShowers = self.CurretnShowers
 				self.status.CurrentTemp = self.CurrentTemp
 				print ('current temp= ' + str(self.CurretnShowers) + ' MinTemp = ' +  str(CureItem['mintemp']) +  ' TargetTrmp = ' + str(CureItem['targettemp']))
-				if  self.CurretnShowers == -1 :
+				if readonltmode == True:
+					self.status.ActiveYesNo = 'No'
+					self.status.Date = CurrentDate
+					self.status.MinVal = 0.0
+					self.status.Status = 'off'
+					self.status.TargetVal = 0.0
+					self.status.TimeToStartMin = 0
+					#time.sleep(Config.SampleRateInSec)
+					if BoilerStatus==1: 
+							Boiler.SetRelay(Config.ControlRelayNum,0)
+					print(strTime4Log + "read only mode ... ")
+				elif  self.CurretnShowers == -1 :
 					self.status.ActiveYesNo = 'No'
 					self.status.Date = CurrentDate
 					self.status.MinVal = 0.0
@@ -243,7 +255,7 @@ class Boiler:
 							self.status.HeaterOnOff ='On'
 						self.status.TargetVal = float(TargettempOn)
 						self.status.TimeToStartMin = time2startInMin
-						time.sleep(Config.SampleRateInSec)
+				time.sleep(Config.SampleRateInSec)
 		except:
 			print("BoilerMonitor: " + traceback.format_exc())
 
