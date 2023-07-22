@@ -12,6 +12,7 @@ class BoilerStatus:
         self._mTimeToStartMin = 0 
         self._mCurrentTemp = [-1,-1,-1] 
         self._mCurrentShowers = 0.0 
+        self._mCurrentShowersnew = 0.0 
         self._mActiveYesNo = 'no'  
     def customDict(self):
         dup = self.__dict__.copy()
@@ -37,6 +38,8 @@ class BoilerStatus:
          	return self._mCurrentTemp  
     def get_CurrentShowers(self):
          	return self._mCurrentShowers  
+    def get_CurrentShowersnew(self):
+         	return self._mCurrentShowersnew  
     def get_ActiveYesNo(self):
          	return self._mActiveYesNo  
      
@@ -56,6 +59,8 @@ class BoilerStatus:
          	self._mCurrentTemp = a
     def set_CurrentShowers(self,a):
          	self._mCurrentShowers = a
+    def set_CurrentShowersnew(self,a):
+         	self._mCurrentShowersnew = a
     def set_ActiveYesNo(self,a):
          	self._mActiveYesNo = a
      
@@ -68,4 +73,5 @@ class BoilerStatus:
     TimeToStartMin = property(get_TimeToStartMin, set_TimeToStartMin) 
     CurrentTemp = property(get_CurrentTemp, set_CurrentTemp) 
     CurrentShowers = property(get_CurrentShowers, set_CurrentShowers) 
+    CurrentShowersnew = property(get_CurrentShowersnew, set_CurrentShowersnew) 
     ActiveYesNo = property(get_ActiveYesNo, set_ActiveYesNo) 

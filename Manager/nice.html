@@ -55,6 +55,7 @@
     </head>
    <body onload="displaydata()">
 	<Section>
+        <div id="Showersnew-gauge" class=gauge></div>
         <div id="Showers-gauge" class=gauge></div>
         <article>
         <p id="temp-up-gauge" class=smallgauge></p>
@@ -91,10 +92,11 @@
                         document.getElementById("heaterstatus").innerHTML = "Heater is: &#128293; ("  + obj.HeaterOnOff +")"
                     }
 					gs.refresh(obj.CurrentShowers)
+          			gsn.refresh(obj.CurrentShowersnew)
                     gu.refresh(obj.CurrentTemp[2])
                     gm.refresh(obj.CurrentTemp[0])
                     gl.refresh(obj.CurrentTemp[1])
-                    
+          
 				}
 		function Get(yourUrl){
 					var Httpreq = new XMLHttpRequest(); // a new request
@@ -221,6 +223,17 @@
         title: "showers",
         label: "Showers",
         levelColors: ["#FFFF00", "#FF8C00", "#ff0000"],
+      });
+      var gsn = new JustGage({
+        id: "Showersnew-gauge",
+        value: TempVal,
+        decimals: true,
+        min: 0,
+        max: 10,
+        pointer: true,
+        title: "showers new",
+        label: "Showers new",
+        levelColors: ["#FFFF00", "#FF8C00", "#ff0000"],
   });
 
 
@@ -238,14 +251,15 @@
     var firstdate = todate(rows[0])
     var lastate = todate(rows[rows.length -1])
     data.addColumn('date', 'Time of Day');
-    data.addColumn('number', 'Available Showers');
+    data.addColumn('number', 'Avail Showers old');
     data.addColumn('number', 'Min Showers');
     data.addColumn('number', 'Target Showers');
     data.addColumn('number', 'Heater Status');
+    data.addColumn('number', 'Avail Showers');
     rows.forEach(myFunction);
     function myFunction(value, index, array) {
         x = value.split(",")
-        data.addRow([new Date(x[0],x[1],x[2],x[3],x[4],x[5]),parseFloat(x[6]),parseFloat(x[7]),parseFloat(x[8]),parseFloat(x[9])]);
+        data.addRow([new Date(x[0],x[1],x[2],x[3],x[4],x[5]),parseFloat(x[6]),parseFloat(x[7]),parseFloat(x[8]),parseFloat(x[9]),parseFloat(x[10])]);
     }
     var options = {
         width: 900,
