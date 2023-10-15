@@ -10,31 +10,31 @@ import controlrelay
 import traceback # DEBUG
 import requests
 import json
-import RPi.GPIO as GPIO
+i#mport RPi.GPIO as GPIO
 pklFileName  = 'BoilerTemp.pkl'
 ESP_RESET_PORT = 27
 ## esp RESET VIA REALY THAT SEND RESET COMMAND
 def resetESP(port,reboottimeinsec):
-    relay = port
-    GPIO.setwarnings(False)
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(relay, GPIO.OUT)
-    GPIO.output(relay, GPIO.HIGH)
-    time.sleep(1)
-    GPIO.output(relay, GPIO.LOW)
-    time.sleep(reboottimeinsec)
+#    relay = port
+#    GPIO.setwarnings(False)
+#    GPIO.setmode(GPIO.BCM)
+#    GPIO.setup(relay, GPIO.OUT)
+#    GPIO.output(relay, GPIO.HIGH)
+#    time.sleep(1)
+#    GPIO.output(relay, GPIO.LOW)
+#    time.sleep(reboottimeinsec)
 def clearport(port):
-  GPIO.setwarnings(False)
-  GPIO.setmode(GPIO.BCM)
-  GPIO.setup(port, GPIO.OUT)
-  GPIO.output(port, GPIO.LOW)
+#  GPIO.setwarnings(False)
+#  GPIO.setmode(GPIO.BCM)
+#  GPIO.setup(port, GPIO.OUT)
+#  GPIO.output(port, GPIO.LOW)
    
 #temp structure defenition
 # list of 6 values
 # Val 1 Sensor 1
 # Val 2 Sensor 2
 # Val 3 Sensor 3 
-# Val 4 number of showers new cals
+# Val 4 number of showers new calc
 # Val 5 number of showers
 # Val 5 Time.
 def calcShowers(templist):
@@ -52,27 +52,84 @@ def calcShowers(templist):
           Av = float(templist[0] + templist[1] + templist[2])/3.0
           Pr = float(Av)/TargetTemp - 0.6
           Showers =  Pr * ShowersINBoiler # P1 + P2 + P3
-          th = float(templist[2]/TargetTemp)
-          tm = 0
-          if th >=1:
-            tm = float(templist[1]/TargetTemp)
-            if tm < 1:
-              tm = tm*numberofsensors/ShowersINBoiler
-          tl = 0
-          if tm >=1:
-            tl = float(templist[0]/TargetTemp)
-            if tl < 1:
-              tl = tl*numberofsensors/ShowersINBoiler
-          Showersnew = th+tm+tl
-          
-          if Showersnew >=1:
-            Showersnew = Showersnew * ShowersINBoiler/numberofsensors
-            
+          #th = float(templist[2]/TargetTemp)
+          #tm = 0
+          #if th >=1:
+          #  tm = float(templist[1]/TargetTemp)
+          #  if tm < 1:
+          #    tm = tm*numberofsensors/ShowersINBoiler
+          #tl = 0
+          #if tm >=1:
+          #  tl = float(templist[0]/TargetTemp)
+          #  if tl < 1:
+          #    tl = tl*numberofsensors/ShowersINBoiler
+          coldwatertemp = float(getRTtempfromWeb())
+          sensors = [templist[2],templist[1],templist[0],coldwatertemp-2,coldwatertemp-2]
+          Showersnew = calculate(sensors,BoilerCapacuty,ShowerSize+20,TargetTemp)#th+tm+tl
+          #factor = calcshowerfactor(TargetTemp,templist[2],ShowerSize,-1)
+          #if Showersnew >=1:
+          #  Showersnew = factor * Showersnew * ShowersINBoiler/numberofsensors
           TempList = [templist[1],templist[0],templist[2],int(Showersnew*100)/100.0,int(Showers*100)/100.0,datetime.datetime.now()]
       output = open(pklFileName, 'wb')
       pickle.dump(TempList, output)
       output.close()
       return [(int(Showers*100)/100.0)*10,(int(Showersnew*100)/100.0)*10]
+def calculate(sensors, BoilerCapacuty,showersize,showertemp):
+    nofshowers = 0
+    if len(sensors) > 3:
+        high = sensors[0]
+        med = sensors[1]
+        low = sensors[2]
+        boilercoldwater = sensors[3]
+        if len(sensors) > 4:
+            showerrcoldwater = sensors[4]
+        else:
+            showerrcoldwater = boilercoldwater
+        if showerrcoldwater >= showertemp or boilercoldwater >= showertemp:
+            nofshowers = 100
+        elif high <= boilercoldwater:
+            nofshowers = 0
+        else:
+            sensorcapacity = BoilerCapacuty/3
+            showersizefromboiler = showersize*(showertemp-showerrcoldwater)/(high-showerrcoldwater)
+            while(high >= showertemp):
+                #print (low,med,high,showersizefromboiler)
+                high = (showersizefromboiler*med  + (sensorcapacity - showersizefromboiler)*high)/(sensorcapacity)
+                med = (showersizefromboiler*low  + (sensorcapacity - showersizefromboiler)*med)/(sensorcapacity)
+                low = (showersizefromboiler*showerrcoldwater  + (sensorcapacity - showersizefromboiler)*low)/(sensorcapacity)
+                showersizefromboiler = showersize*(showertemp-showerrcoldwater)/(high-showerrcoldwater)
+                nofshowers+=1
+            nofshowers += float(f"{high/showertemp:.2f}")
+            print("calculate :",nofshowers,"Showers")
+    return nofshowers
+
+def calcshowerfactor(expectedShowertemp,boilertemp,showersize,coldwatertemp):
+    factor = 0
+    if coldwatertemp < 0:
+      coldwatertemp = float(getRTtempfromWeb())
+    if expectedShowertemp <= coldwatertemp:
+       factor = 2
+    elif boilertemp <= coldwatertemp:
+      factor = 0
+    else:
+      hotwatterforshower = (showersize*(expectedShowertemp - coldwatertemp )/(boilertemp- coldwatertemp))
+      factor = 1/abs(float(hotwatterforshower*(coldwatertemp - expectedShowertemp - boilertemp))/float(expectedShowertemp*showersize))
+    print ("calcshowerfactor current factor =", factor)
+    return factor
+
+def getRTtempfromWeb():
+    x = requests.get('https://www.weather2day.co.il/observation')
+    pos = x.text.find('תל אביב חוף') #'/station/69')
+    currenttemp = 20
+    if pos > 0:
+        #section = x.text[pos:]
+        pos = x.text.index('temperature',pos) 
+        pos = x.text.index('">',pos) 
+        pos1 = x.text.index('</td>',pos) 
+        if pos > 0 and pos1 > 0:
+            currenttemp = x.text[pos+2:pos1].strip()
+    print ("getRTtempfromWeb current temp =", currenttemp)
+    return(currenttemp)
 def GetShowers():
      
      try:

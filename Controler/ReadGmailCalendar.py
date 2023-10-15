@@ -133,7 +133,7 @@ class ReadGmailCalendar(object):
                         else:
                             day = endtime.weekday() + 2
                     time = '{:02d}'.format(endtime.hour) + ":" + '{:02d}'.format(endtime.minute) + ":" + '{:02d}'.format(endtime.second) 
-                    if endtime < sttime: #if end is before start add 1 day
+                    if endtime.replace(tzinfo=None) < sttime.replace(tzinfo=None): #if end is before start add 1 day
                         day +=1
                         if day > 7:
                             day = 1
